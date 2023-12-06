@@ -20,5 +20,6 @@ jose: 用于JWT（JSON Web Token）支持。
 用于连接MYSQL
 `pip install mysql-connector-python`
 
+`pip install HTTPException`
 运行
 `uvicorn main:app --reload`

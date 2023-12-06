@@ -1,25 +1,31 @@
-from fastapi import FastAPI
-from config import DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, DB_PORT
+# main.py
+from fastapi import FastAPI, HTTPException
 import mysql.connector
+from config import DB_CONFIG
 
 app = FastAPI()
 
-
 # 连接到 MySQL 数据库
-db = mysql.connector.connect(
-    host=DB_HOST,
-    user=DB_USER,
-    password=DB_PASSWORD,
-    database=DB_NAME,
-    port=DB_PORT
-)
+db = mysql.connector.connect(**DB_CONFIG)
 cursor = db.cursor()
 
-@app.get("/")
-async def read_root():
-    return {"Hello": "World"}
+# 示例路由 - 获取用户信息
+@app.get("/users/{user_id}")
+async def get_user(user_id: int):
+    query = "SELECT * FROM users WHERE id = %s"
+    cursor.execute(query, (user_id,))
+    user = cursor.fetchone()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {"user": user}
 
-# 在这里添加其他路由和逻辑来处理用户表、驱动表等操作
+# 示例路由 - 创建新用户
+@app.post("/users/")
+async def create_user(name: str):
+    query = "INSERT INTO users (name) VALUES (%s)"
+    cursor.execute(query, (name,))
+    db.commit()
+    return {"message": "User created successfully"}
 
 if __name__ == "__main__":
     import uvicorn
