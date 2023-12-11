@@ -21,5 +21,11 @@ jose: 用于JWT（JSON Web Token）支持。
 `pip install mysql-connector-python`
 
 `pip install HTTPException`
+使用orm架构sqlalchemy
+`pip install sqlalchemy`
+`pip install mysql-connector-python`
+
+`pip install sqlalchemy_utils`
+`pip install pydantic`
 运行
 `uvicorn main:app --reload`

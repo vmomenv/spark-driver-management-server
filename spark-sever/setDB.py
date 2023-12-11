@@ -1,266 +1,70 @@
-import mysql.connector
-from mysql.connector import Error
-from config import DB_CONFIG  # 导入数据库配置
+# setDB.py
 
-def initialize_database():
-    try:
-        # 连接到 MySQL 数据库
-        db = mysql.connector.connect(**DB_CONFIG)
-        cursor = db.cursor()
+from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String
+from sqlalchemy_utils import database_exists, create_database
+import configparser
 
-        # 检查数据库是否存在
-        cursor.execute("SHOW DATABASES")
-        databases = [db[0] for db in cursor.fetchall()]
+# 读取配置文件
+config = configparser.ConfigParser()
+config.read('config.ini')
 
-        # 如果 'sparkdriver' 数据库不存在，则创建
-        if 'sparkdriver' not in databases:
-            create_db_query = "CREATE DATABASE sparkdriver CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
-            cursor.execute(create_db_query)
-            print("Database 'sparkdriver' created successfully")
-        else:
-            print("Database 'sparkdriver' already exists")
+# 获取数据库连接信息
+db_host = config['database']['host']
+db_port = config['database']['port']
+db_user = config['database']['username']
+db_pass = config['database']['password']
+default_db_name = config['database']['database_name']
 
-        # 关闭连接
-        cursor.close()
-        db.close()
-    except Error as e:
-        print(f"Error initializing database: {e}")
-        if 'db' in locals() and db.is_connected():
-            cursor.close()
-            db.close()
+# 构建数据库连接 URI
+default_db_uri = f"mysql+pymysql://{db_user}:{db_pass}@{db_host}:{db_port}/{default_db_name}"
 
-def create_users_table():
-    try:
-        # 连接到 MySQL 数据库
-        db = mysql.connector.connect(**DB_CONFIG)
-        cursor = db.cursor()
+# 创建默认数据库连接引擎
+default_engine = create_engine(default_db_uri)
 
-        # 切换到 'sparkdriver' 数据库
-        cursor.execute("USE sparkdriver")
+# 如果连接的默认数据库不存在，则创建
+if not database_exists(default_engine.url):
+    create_database(default_engine.url)
 
-        # 创建用户表
-        create_table_query = """
-        CREATE TABLE IF NOT EXISTS users (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            name VARCHAR(100) NOT NULL,
-            email VARCHAR(100) NOT NULL,
-            password VARCHAR(255) NOT NULL
-        )
-        """
-        cursor.execute(create_table_query)
-        print("Users table created successfully")
+# 创建新的 engine 连接到新创建的数据库 sparkdriver
+sparkdriver_db_name = 'sparkdriver'
+sparkdriver_db_uri = f"mysql+pymysql://{db_user}:{db_pass}@{db_host}:{db_port}/{sparkdriver_db_name}"
+sparkdriver_engine = create_engine(sparkdriver_db_uri)
 
-        # 关闭连接
-        cursor.close()
-        db.close()
-    except Error as e:
-        print(f"Error creating users table: {e}")
-        if 'db' in locals() and db.is_connected():
-            cursor.close()
-            db.close()
+# 如果连接的 sparkdriver 数据库不存在，则创建
+if not database_exists(sparkdriver_engine.url):
+    create_database(sparkdriver_engine.url)
 
-# 创建接口表
-def create_interfaces_table():
-    try:
-        db = mysql.connector.connect(**DB_CONFIG)
-        cursor = db.cursor()
+# 创建元数据对象
+metadata = MetaData()
 
-        cursor.execute("USE sparkdriver")
+# 定义用户表格
+users = Table(
+    'users',
+    metadata,
+    Column('user_id', Integer, primary_key=True),
+    Column('username', String(50), unique=True),
+    Column('password', String(255)),
+    Column('email', String(100), unique=True),
+    Column('created_at', String(50)),
+    Column('last_login', String(50))
+)
 
-        create_table_query = """
-        CREATE TABLE IF NOT EXISTS interfaces (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            path VARCHAR(255) NOT NULL
-        )
-        """
-        cursor.execute(create_table_query)
-        print("Interfaces table created successfully")
+# 定义角色表格
+roles = Table(
+    'roles',
+    metadata,
+    Column('role_id', Integer, primary_key=True),
+    Column('role_name', String(50), unique=True)
+)
 
-        cursor.close()
-        db.close()
-    except Error as e:
-        print(f"Error creating interfaces table: {e}")
-        if 'db' in locals() and db.is_connected():
-            cursor.close()
-            db.close()
+# 定义用户角色关联表格
+user_roles = Table(
+    'user_roles',
+    metadata,
+    Column('id', Integer, primary_key=True),
+    Column('user_id', Integer),
+    Column('role_id', Integer)
+)
 
-# 创建角色表
-def create_roles_table():
-    try:
-        db = mysql.connector.connect(**DB_CONFIG)
-        cursor = db.cursor()
-
-        cursor.execute("USE sparkdriver")
-
-        create_table_query = """
-        CREATE TABLE IF NOT EXISTS roles (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            role_name VARCHAR(50) NOT NULL
-        )
-        """
-        cursor.execute(create_table_query)
-        print("Roles table created successfully")
-
-        cursor.close()
-        db.close()
-    except Error as e:
-        print(f"Error creating roles table: {e}")
-        if 'db' in locals() and db.is_connected():
-            cursor.close()
-            db.close()
-
-# 创建角色接口表
-def create_role_interfaces_table():
-    try:
-        db = mysql.connector.connect(**DB_CONFIG)
-        cursor = db.cursor()
-
-        cursor.execute("USE sparkdriver")
-
-        create_table_query = """
-        CREATE TABLE IF NOT EXISTS role_interfaces (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            role_id INT,
-            interface_id INT,
-            FOREIGN KEY (role_id) REFERENCES roles(id),
-            FOREIGN KEY (interface_id) REFERENCES interfaces(id)
-        )
-        """
-        cursor.execute(create_table_query)
-        print("Role Interfaces table created successfully")
-
-        cursor.close()
-        db.close()
-    except Error as e:
-        print(f"Error creating role_interfaces table: {e}")
-        if 'db' in locals() and db.is_connected():
-            cursor.close()
-            db.close()
-
-# 创建用户角色表
-def create_user_roles_table():
-    try:
-        db = mysql.connector.connect(**DB_CONFIG)
-        cursor = db.cursor()
-
-        cursor.execute("USE sparkdriver")
-
-        create_table_query = """
-        CREATE TABLE IF NOT EXISTS user_roles (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            user_id INT,
-            role_id INT,
-            FOREIGN KEY (user_id) REFERENCES users(id),
-            FOREIGN KEY (role_id) REFERENCES roles(id)
-        )
-        """
-        cursor.execute(create_table_query)
-        print("User Roles table created successfully")
-
-        cursor.close()
-        db.close()
-    except Error as e:
-        print(f"Error creating user_roles table: {e}")
-        if 'db' in locals() and db.is_connected():
-            cursor.close()
-            db.close()
-
-# 创建页面表
-def create_pages_table():
-    try:
-        db = mysql.connector.connect(**DB_CONFIG)
-        cursor = db.cursor()
-
-        cursor.execute("USE sparkdriver")
-
-        create_table_query = """
-        CREATE TABLE IF NOT EXISTS pages (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            page_name VARCHAR(100) NOT NULL
-        )
-        """
-        cursor.execute(create_table_query)
-        print("Pages table created successfully")
-
-        cursor.close()
-        db.close()
-    except Error as e:
-        print(f"Error creating pages table: {e}")
-        if 'db' in locals() and db.is_connected():
-            cursor.close()
-            db.close()
-
-# 创建页面接口表
-def create_page_interfaces_table():
-    try:
-        db = mysql.connector.connect(**DB_CONFIG)
-        cursor = db.cursor()
-
-        cursor.execute("USE sparkdriver")
-
-        create_table_query = """
-        CREATE TABLE IF NOT EXISTS page_interfaces (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            page_id INT,
-            interface_id INT,
-            FOREIGN KEY (page_id) REFERENCES pages(id),
-            FOREIGN KEY (interface_id) REFERENCES interfaces(id)
-        )
-        """
-        cursor.execute(create_table_query)
-        print("Page Interfaces table created successfully")
-
-        cursor.close()
-        db.close()
-    except Error as e:
-        print(f"Error creating page_interfaces table: {e}")
-        if 'db' in locals() and db.is_connected():
-            cursor.close()
-            db.close()
-
-
-#
-def create_roles_table():
-    try:
-        db = mysql.connector.connect(**DB_CONFIG)
-        cursor = db.cursor()
-
-        cursor.execute("USE sparkdriver")
-
-        create_table_query = """
-        CREATE TABLE IF NOT EXISTS roles (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            role_name VARCHAR(50) NOT NULL
-        )
-        """
-        cursor.execute(create_table_query)
-        print("Roles table created successfully")
-
-        # 添加初始化数据
-        initial_roles = [
-            ("admin",),
-            ("auditor",),
-            ("delivery",)
-        ]
-        add_roles_query = "INSERT INTO roles (role_name) VALUES (%s)"
-
-        cursor.executemany(add_roles_query, initial_roles)
-        db.commit()
-        print("Initial roles added successfully")
-
-        cursor.close()
-        db.close()
-    except Error as e:
-        print(f"Error creating roles table: {e}")
-        if 'db' in locals() and db.is_connected():
-            cursor.close()
-            db.close()
-if __name__ == "__main__":
-    initialize_database()          # 初始化数据库
-    create_users_table()           # 创建用户表
-    create_interfaces_table()      # 创建接口表
-    create_roles_table()           # 创建角色表
-    create_role_interfaces_table() # 创建角色接口表
-    create_user_roles_table()      # 创建用户角色表
-    create_pages_table()           # 创建页面表
-    create_page_interfaces_table() # 创建页面接口表
+# 创建表格
+metadata.create_all(sparkdriver_engine)
