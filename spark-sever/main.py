@@ -109,12 +109,18 @@ async def delete_user(user_id: int):
 
 
 # API 路由：用于获取所有用户信息
-@app.get("/api/user/getUser")
+from typing import List
+
+@app.get("/api/user/getUser", response_model=List[dict])
 async def get_users():
     db = SessionLocal()
-    query = db.query(users).all()
-    db.close()
-    return query
+    try:
+        query = db.query(users).all()
+        user_data = [{column: getattr(user, column) for column in users.columns.keys()} for user in query]
+        return user_data
+    finally:
+        db.close()
+
 
 if __name__ == "__main__":
     import uvicorn
