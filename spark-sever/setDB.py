@@ -41,13 +41,14 @@ metadata = MetaData()
 users = Table(
     'users',
     metadata,
-    Column('user_id', Integer, primary_key=True),
+    Column('user_id', Integer, primary_key=True, autoincrement=True),
     Column('username', String(50), unique=True),
     Column('password', String(255)),
     Column('email', String(100), unique=True),
     Column('created_at', String(50)),
     Column('last_login', String(50))
 )
+
 
 # 定义角色表格
 roles = Table(
