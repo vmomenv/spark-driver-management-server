@@ -109,7 +109,8 @@ async def delete_user(user_id: int):
 
 
 # API 路由：用于获取所有用户信息
-from typing import List
+from typing import List, Dict
+
 
 @app.get("/api/user/getUser", response_model=List[dict])
 async def get_users():
@@ -120,6 +121,62 @@ async def get_users():
         return user_data
     finally:
         db.close()
+@app.post("/api/permission/getMenu")
+def get_menu() -> Dict:
+    menu = [
+        {
+            "path": "/home",
+            "name": "home",
+            "label": "首页",
+            "icon": "s-home",
+            "url": "Home.vue"
+        },
+        {
+            "path": "/file",
+            "name": "file",
+            "label": "文件管理",
+            "icon": "files",
+            "url": "File.vue"
+        },
+        {
+            "path": "/user",
+            "name": "user",
+            "label": "用户管理",
+            "icon": "s-custom",
+            "url": "User.vue"
+        },
+        {
+            "label": "其他",
+            "icon": "location",
+            "children": [
+                {
+                    "path": "/page1",
+                    "name": "page1",
+                    "label": "页面1",
+                    "icon": "setting",
+                    "url": "PageOne.vue"
+                },
+                {
+                    "path": "/page2",
+                    "name": "page2",
+                    "label": "页面2",
+                    "icon": "setting",
+                    "url": "PageTwo.vue"
+                }
+            ]
+        }
+    ]
+
+    response_data = {
+        "code": 20000,
+        "data": {
+            "menu": menu,
+            "token": "114514",  # Replace this with your actual token
+            "message": "获取成功"
+        }
+    }
+
+    return response_data
 
 
 if __name__ == "__main__":
