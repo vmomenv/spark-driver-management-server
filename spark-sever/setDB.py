@@ -67,5 +67,38 @@ user_roles = Table(
     Column('role_id', Integer)
 )
 
+
+# 定义硬件表
+hardware = Table(
+    'hardware',
+    metadata,
+    Column('hardware_id', Integer, primary_key=True, autoincrement=True),
+    Column('hardware_name', String(255)),
+    Column('hardware_model', String(255))
+)
+
+# 定义驱动表
+driver = Table(
+    'driver',
+    metadata,
+    Column('driver_id', Integer, primary_key=True, autoincrement=True),
+    Column('file_name', String(255)),
+    Column('package_name', String(255)),
+    Column('version', String(50)),
+    Column('file_size', Integer),
+    Column('description', String(500)),
+    Column('hardware_device', String(255)),
+    Column('hardware_type', String(255))
+)
+
+# 定义硬件驱动关联表
+hardware_driver = Table(
+    'hardware_driver',
+    metadata,
+    Column('id', Integer, primary_key=True, autoincrement=True),
+    Column('hardware_id', Integer),
+    Column('driver_id', Integer)
+)
+
 # 创建表格
 metadata.create_all(sparkdriver_engine)
