@@ -1,11 +1,17 @@
-from fastapi import FastAPI, HTTPException
+import shutil
+
+from fastapi import FastAPI, Form, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String, DateTime
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
 import configparser
 from sqlalchemy_utils import database_exists, create_database
-
+from fastapi import File, UploadFile
+from fastapi.responses import JSONResponse
+from pathlib import Path
+import os
+import json
 # 创建 FastAPI 应用
 app = FastAPI()
 
@@ -178,7 +184,59 @@ def get_menu() -> Dict:
 
     return response_data
 # 文件上传
+@app.post("/api/upload_driver/")
+async def upload_driver(
+        driver_file: UploadFile = File(...),
+        hardware_type: str = Form(...),
+        package_name: str = Form(...),
+        version: str = Form(None),
+        size: int = Form(None),
+        description: str = Form(None),
+        applicable_devices: str = Form(None)
+):
+    # Define the directory path based on hardware_type and package_name
+    driver_dir = f"../spark-driver-repo/{hardware_type}/{package_name}/"
+    json_file_path = f"{driver_dir}/data.json"
 
+    # Create directories if they don't exist
+    Path(driver_dir).mkdir(parents=True, exist_ok=True)
+
+    try:
+        # Save the uploaded file to the specified directory
+        file_path = os.path.join(driver_dir, driver_file.filename)
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(driver_file.file, buffer)
+
+        # Optionally, create a JSON object to store metadata if needed
+        metadata = {
+            "version": version,
+            "size": size,
+            "description": description,
+            "applicable_devices": applicable_devices
+        }
+
+        # Save metadata to a JSON file in the same directory if needed
+        if any(metadata.values()):
+            with open(json_file_path, "w") as json_file:
+                json.dump(metadata, json_file)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to upload file: {str(e)}")
+
+    return {
+        "message": "File uploaded successfully",
+        "filename": driver_file.filename,
+        "hardware_type": hardware_type,
+        "package_name": package_name,
+        "version": version,
+        "size": size,
+        "description": description,
+        "applicable_devices": applicable_devices
+    }
+
+
+@app.post("/uploadfile/")
+async def create_upload_file(file: UploadFile):
+    return {"filename": file.filename}
 
 if __name__ == "__main__":
     import uvicorn
