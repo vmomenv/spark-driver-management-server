@@ -88,7 +88,8 @@ driver = Table(
     Column('file_size', Integer),
     Column('description', String(500)),
     Column('hardware_device', String(255)),
-    Column('hardware_type', String(255))
+    Column('hardware_type', String(255)),
+    Column('system_version', String(255))
 )
 
 # 定义硬件驱动关联表

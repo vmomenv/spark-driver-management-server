@@ -192,7 +192,8 @@ async def upload_driver(
         version: str = Form(None),
         size: int = Form(None),
         description: str = Form(None),
-        applicable_devices: str = Form(None)
+        applicable_devices: str = Form(None),
+        system_version: str = Form(None)
 ):
     # Define the directory path based on hardware_type and package_name
     driver_dir = f"../spark-driver-repo/{hardware_type}/{package_name}/"
@@ -209,16 +210,20 @@ async def upload_driver(
 
         # Optionally, create a JSON object to store metadata if needed
         metadata = {
+            "hardware_type": hardware_type,
+            "package_name": package_name,
             "version": version,
             "size": size,
             "description": description,
-            "applicable_devices": applicable_devices
+            "applicable_devices": applicable_devices,
+            "system_version": system_version
         }
 
         # Save metadata to a JSON file in the same directory if needed
         if any(metadata.values()):
             with open(json_file_path, "w") as json_file:
                 json.dump(metadata, json_file)
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to upload file: {str(e)}")
 
@@ -230,7 +235,8 @@ async def upload_driver(
         "version": version,
         "size": size,
         "description": description,
-        "applicable_devices": applicable_devices
+        "applicable_devices": applicable_devices,
+        "system_version": system_version
     }
 
 
