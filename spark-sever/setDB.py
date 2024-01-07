@@ -3,6 +3,7 @@
 from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String
 from sqlalchemy_utils import database_exists, create_database
 import configparser
+import urllib.request
 
 # 读取配置文件
 config = configparser.ConfigParser()
@@ -49,7 +50,6 @@ users = Table(
     Column('last_login', String(50))
 )
 
-
 # 定义角色表格
 roles = Table(
     'roles',
@@ -66,7 +66,6 @@ user_roles = Table(
     Column('user_id', Integer),
     Column('role_id', Integer)
 )
-
 
 # 定义硬件表
 hardware = Table(
@@ -101,5 +100,45 @@ hardware_driver = Table(
     Column('driver_id', Integer)
 )
 
+
+# 下载 usb.ids 与pci.ids硬件表
+def download_file(url, filename):
+    # 下载文件
+    urllib.request.urlretrieve(url, filename)
+
+
+def parse_usb_ids(filename):
+    # 解析 usb.ids 文件
+    with open(filename, 'r', encoding='utf-8') as file:
+        lines = file.readlines()
+        # 在控制台打印前几行
+        for i in range(20):
+            print(lines[i])
+
+
+def parse_pci_ids(filename):
+    # 解析 pci.ids 文件
+    with open(filename, 'r', encoding='utf-8') as file:
+        lines = file.readlines()
+        # 在控制台打印前几行
+        for i in range(20):
+            print(lines[i])
+
+
+# 下载文件
+usb_ids_url = "http://www.linux-usb.org/usb.ids"
+pci_ids_url = "https://github.com/pciutils/pciids/blob/master/pci.ids"
+usb_ids_filename = "usb.ids"
+pci_ids_filename = "pci.ids"
+
+download_file(usb_ids_url, usb_ids_filename)
+download_file(pci_ids_url, pci_ids_filename)
+
+# 解析并打印结果
+print("USB IDs文件解析结果：")
+parse_usb_ids(usb_ids_filename)
+
+print("\nPCI IDs文件解析结果：")
+parse_pci_ids(pci_ids_filename)
 # 创建表格
 metadata.create_all(sparkdriver_engine)
