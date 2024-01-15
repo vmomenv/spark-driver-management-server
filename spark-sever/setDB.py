@@ -68,6 +68,7 @@ user_roles = Table(
 )
 
 # 定义硬件表
+
 hardware = Table(
     'hardware',
     metadata,

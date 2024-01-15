@@ -29,10 +29,9 @@ for line in lines:
             vendorObj['device_list'] = []
     elif line.startswith('\t\t'):
         subVendorList = line.replace('\t', '').split(' ')
-        deviceObj.get('sub_vendor').append({
-            'sub_vendor': subVendorList[0].strip(),
-            'sub_device': subVendorList[1].strip(),
-            'sub_vendor_name': ' '.join(subVendorList[2:]).strip()
+        deviceObj.get('interface').append({
+            'interface': subVendorList[0].strip(),
+            'interface_name': ' '.join(subVendorList[1:]).strip()
         })
     elif line.startswith('\t'):
         deviceDataList = line.replace('\t', '').split(' ')
@@ -43,7 +42,7 @@ for line in lines:
         deviceObj = {
             'device_id': ':'.join(newDeviceData).strip(),
             'device_name': ' '.join(deviceDataList[2:]).strip(),
-            'sub_vendor': []
+            'interface': []
         }
         deviceList.append(deviceObj)
 

@@ -32,7 +32,7 @@ for line in lines:
         deviceObj.get('sub_vendor').append({
             'sub_vendor': subVendorList[0].strip(),
             'sub_device': subVendorList[1].strip(),
-            'sub_vendor_name': ' '.join(subVendorList[2:]).strip()
+            'sub_system_name': ' '.join(subVendorList[2:]).strip()
         })
     elif line.startswith('\t'):
         deviceDataList = line.replace('\t', '').split(' ')
