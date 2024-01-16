@@ -2,7 +2,7 @@ import shutil
 
 from fastapi import FastAPI, Form, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String, DateTime
+from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String, DateTime,select
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
 import configparser
@@ -243,6 +243,53 @@ async def upload_driver(
 @app.post("/uploadfile/")
 async def create_upload_file(file: UploadFile):
     return {"filename": file.filename}
+
+pci_hardware = Table(
+    'pci_hardware',
+    metadata,
+    Column('id', Integer, primary_key=True, autoincrement=True),
+    Column('vendor', String(50)),
+    Column('vendor_name', String(255)),
+    Column('device_id', String(50)),
+    Column('device_name', String(255)),
+    Column('sub_vendor', String(50)),
+    Column('sub_device', String(50)),
+    Column('sub_system_name', String(255)),
+    Column('entry_id', String(50)),
+)
+
+
+def get_hardware_data():
+    with default_engine.connect() as conn:
+        query = select(pci_hardware)
+        result = conn.execute(query)
+        return result.fetchall()
+
+
+def format_output(data):
+    output = {'labels': [], 'data': []}
+
+    for entry in data:
+        labels = []
+        labels.append(f"vendor_name: {entry['vendor_name']}, vendor: {entry['vendor']}")
+        labels.append(f"device_id: {entry['device_id']}, device_name: {entry['device_name']}")
+        labels.append(
+            f"sub_vendor: {entry['sub_vendor']}, sub_device: {entry['sub_device']}, sub_system_name: {entry['sub_system_name']}")
+
+        output['labels'].append(labels)
+        output['data'].append(entry['entry_id'])
+
+    return output
+
+
+@app.get("/api/getHardware")
+async def get_hardware():
+    try:
+        hardware_data = get_hardware_data()
+        formatted_data = format_output(hardware_data)
+        return formatted_data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn

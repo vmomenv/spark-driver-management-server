@@ -165,7 +165,7 @@ try:
     for entry in data:
         vendor = entry['vendor']
         vendor_name = entry['vendor_name']
-
+        print(vendor)
         if entry['device_list']:
             for device in entry['device_list']:
                 device_id = device['device_id']

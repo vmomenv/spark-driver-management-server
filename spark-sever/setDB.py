@@ -82,7 +82,14 @@ pci_hardware = Table(
     Column('entry_id', String(50)),
 )
 
-
+vendor_table = Table(
+    'vendor_table',
+    metadata,
+    Column('id', Integer, primary_key=True, autoincrement=True),
+    Column('vendor', String(50)),
+    Column('vendor_name', String(255)),
+    Column('combined_column', String(255)),  # 合并的列
+)
 
 # 定义驱动表
 driver = Table(
