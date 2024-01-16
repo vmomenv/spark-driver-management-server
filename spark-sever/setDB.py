@@ -68,14 +68,21 @@ user_roles = Table(
 )
 
 # 定义硬件表
-
-hardware = Table(
-    'hardware',
+pci_hardware = Table(
+    'pci_hardware',
     metadata,
-    Column('hardware_id', Integer, primary_key=True, autoincrement=True),
-    Column('hardware_name', String(255)),
-    Column('hardware_model', String(255))
+    Column('id', Integer, primary_key=True, autoincrement=True),
+    Column('vendor', String(50)),
+    Column('vendor_name', String(255)),
+    Column('device_id', String(50)),
+    Column('device_name', String(255)),
+    Column('sub_vendor', String(50)),
+    Column('sub_device', String(50)),
+    Column('sub_system_name', String(255)),
+    Column('entry_id', String(50)),
 )
+
+
 
 # 定义驱动表
 driver = Table(
