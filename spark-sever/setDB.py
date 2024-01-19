@@ -81,16 +81,34 @@ pci_hardware = Table(
     Column('sub_system_name', String(255)),
     Column('entry_id', String(50)),
 )
+usb_hardware = Table(
+    'usb_hardware',
+    metadata,
+    Column('id', Integer, primary_key=True, autoincrement=True),
+    Column('vendor', String(50)),
+    Column('vendor_name', String(255)),
+    Column('device_id', String(50)),
+    Column('device_name', String(255)),
+    Column('entry_id', String(50)),
 
-vendor_table = Table(
-    'vendor_table',
+)
+#定义厂商表
+pci_vendor = Table(
+    'pci_vendor',
     metadata,
     Column('id', Integer, primary_key=True, autoincrement=True),
     Column('vendor', String(50)),
     Column('vendor_name', String(255)),
     Column('combined_column', String(255)),  # 合并的列
 )
-
+usb_vendor =Table(
+    'usb_vendor',
+    metadata,
+    Column('id', Integer, primary_key=True, autoincrement=True),
+    Column('vendor', String(50)),
+    Column('vendor_name', String(255)),
+    Column('combined_column', String(255)),  # 合并的列
+)
 # 定义驱动表
 driver = Table(
     'driver',

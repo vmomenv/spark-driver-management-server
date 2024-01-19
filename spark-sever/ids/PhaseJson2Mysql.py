@@ -47,9 +47,9 @@ pci_hardware = Table(
     Column('entry_id', String(50)),
 )
 
-# 定义供应商表
-vendor_table = Table(
-    'vendor_table',
+# 定义pci供应商表
+pci_vendor = Table(
+    'pci_vendor',
     metadata,
     Column('id', Integer, primary_key=True, autoincrement=True),
     Column('vendor', String(50)),
@@ -80,7 +80,7 @@ try:
             'vendor_name': vendor_name,
             'combined_column': f"[{vendor} {vendor_name}]",
         }
-        vendor_insert = vendor_table.insert().values(vendor_data_entry)
+        vendor_insert = pci_vendor.insert().values(vendor_data_entry)
         conn.execute(vendor_insert)
 
         # 保存硬件数据到 pci_hardware
