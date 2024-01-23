@@ -278,7 +278,7 @@ def parse_data_to_json(data):
             }
         # 处理设备
         device_dict = {
-            "value": f"{item[8]}",
+            "value": f"{item[3]}",
             "label":  f"{item[4]}",
         }
         sub_system_dict = {
@@ -286,12 +286,17 @@ def parse_data_to_json(data):
             "label": f"{item[7]}"
         }
 
-        if sub_system_dict["label"] !="None":
-            device_dict["children"] = [sub_system_dict]
+        if item[3]:
+            if "children" not in device_dict:
+                vendor_dict[vendor]["children"] = []
+            vendor_dict[vendor]["children"].append(device_dict)
+        if item[6]:
+            if "children" not in device_dict:
+                device_dict["children"] = []
+            device_dict["children"].append(sub_system_dict)
 
-        # 检查label是否为空，不为空才添加设备
-        if device_dict["label"] !="None":
-            vendor_dict[vendor]["children"] = [device_dict]
+
+
 
     vendor_list = list(vendor_dict.values())
     return vendor_list
