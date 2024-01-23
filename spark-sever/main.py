@@ -1,4 +1,5 @@
 import shutil
+from itertools import groupby
 
 from fastapi import FastAPI, Form, HTTPException
 from pydantic import BaseModel
@@ -259,61 +260,89 @@ pci_hardware = Table(
 )
 
 # 将数据库查询结果转为 JSON 格式
-def parse_data_to_json(data):
-    vendor_dict={}
-    for item in data:
-        vendor =item[1],
-        vendor_name = item[2],
-        device_id = item[3],
-        device_name = item[4],
-        sub_vendor = item[5],
-        sub_device = item[6],
-        sub_system_name = item[7],
-        entry_id = item[8],
 
-        if vendor not in vendor_dict:
-            vendor_dict[vendor] = {
-                "value": f"{item[1]}",
-                "label": f"{item[2]}",
+# 标准解析逻辑
+def parse_pci_hardware_data(rows):
+    grouped_data = groupby(rows, key=lambda x: (x["vendor"], x["sub_device"]))
+    result = []
+
+    for (vendor, sub_device), vendor_rows in grouped_data:
+        vendor_rows = list(vendor_rows)
+
+        entry = {
+            "value": vendor,
+            "label": vendor_rows[0]["vendor_name"],
+        }
+
+        device_entries = []
+
+        for row in vendor_rows:
+            if row["device_id"]:
+                device_entry = {
+                    "value": row["device_id"],
+                    "label": row["device_name"],
+                }
+
+                if row["sub_device"]:
+                    sub_entries = device_entry.get("children", [])
+                    sub_entries.append({
+                        "value": row["sub_device"],
+                        "label": row["sub_system_name"],
+                    })
+                    device_entry["children"] = sub_entries
+
+                device_entries.append(device_entry)
+
+        if device_entries:
+            entry["children"] = device_entries
+
+        result.append(entry)
+
+    # 合并相同 vendor 的数据
+    grouped_by_vendor = groupby(result, key=lambda x: x["value"])
+    final_result = []
+
+    for vendor, vendor_entries in grouped_by_vendor:
+        vendor_entries = list(vendor_entries)
+
+        if len(vendor_entries) == 1:
+            final_result.append(vendor_entries[0])
+        else:
+            combined_entry = {
+                "value": vendor,
+                "label": vendor_entries[0]["label"],
+                "children": []
             }
-        # 处理设备
-        device_dict = {
-            "value": f"{item[3]}",
-            "label":  f"{item[4]}",
-        }
-        sub_system_dict = {
-            "value": f"{item[8]}",
-            "label": f"{item[7]}"
-        }
 
-        if item[3]:
-            if "children" not in device_dict:
-                vendor_dict[vendor]["children"] = []
-            vendor_dict[vendor]["children"].append(device_dict)
-        if item[6]:
-            if "children" not in device_dict:
-                device_dict["children"] = []
-            device_dict["children"].append(sub_system_dict)
+            for entry in vendor_entries:
+                combined_entry["children"].extend(entry.get("children", []))
 
+            final_result.append(combined_entry)
 
+    return final_result
 
-
-    vendor_list = list(vendor_dict.values())
-    return vendor_list
-
-# API 路由：用于获取所有 pci_hardware 数据
+# 将数据库查询结果转为标准解析逻辑的 JSON 格式
 @app.get("/api/pci_hardware/get", response_model=list)
 async def get_pci_hardware():
     db = SessionLocal()
     try:
-        query = db.execute(select(pci_hardware)).all()
-        pci_hardware_data = parse_data_to_json(query)
-        return pci_hardware_data
+        query = db.query(pci_hardware).all()
+        hardware_data = parse_pci_hardware_data([
+            {
+                "vendor": row.vendor,
+                "vendor_name": row.vendor_name,
+                "device_id": row.device_id,
+                "device_name": row.device_name,
+                "sub_vendor": row.sub_vendor,
+                "sub_device": row.sub_device,
+                "sub_system_name": row.sub_system_name,
+                "entry_id": row.entry_id
+            }
+            for row in query
+        ])
+        return hardware_data
     finally:
         db.close()
-
-
-
 
 
 if __name__ == "__main__":
