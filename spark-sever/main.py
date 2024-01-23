@@ -258,38 +258,58 @@ pci_hardware = Table(
     Column('entry_id', String(50)),
 )
 
+# 将数据库查询结果转为 JSON 格式
+def parse_data_to_json(data):
+    vendor_dict={}
+    for item in data:
+        vendor =item[1],
+        vendor_name = item[2],
+        device_id = item[3],
+        device_name = item[4],
+        sub_vendor = item[5],
+        sub_device = item[6],
+        sub_system_name = item[7],
+        entry_id = item[8],
 
-def get_hardware_data():
-    with default_engine.connect() as conn:
-        query = select(pci_hardware)
-        result = conn.execute(query)
-        return result.fetchall()
+        if vendor not in vendor_dict:
+            vendor_dict[vendor] = {
+                "value": f"{item[1]}",
+                "label": f"{item[2]}",
+            }
+        # 处理设备
+        device_dict = {
+            "value": f"{item[8]}",
+            "label":  f"{item[4]}",
+        }
+        sub_system_dict = {
+            "value": f"{item[8]}",
+            "label": f"{item[7]}"
+        }
 
+        if sub_system_dict["label"] !="None":
+            device_dict["children"] = [sub_system_dict]
 
-def format_output(data):
-    output = {'labels': [], 'data': []}
+        # 检查label是否为空，不为空才添加设备
+        if device_dict["label"] !="None":
+            vendor_dict[vendor]["children"] = [device_dict]
 
-    for entry in data:
-        labels = []
-        labels.append(f"vendor_name: {entry['vendor_name']}, vendor: {entry['vendor']}")
-        labels.append(f"device_id: {entry['device_id']}, device_name: {entry['device_name']}")
-        labels.append(
-            f"sub_vendor: {entry['sub_vendor']}, sub_device: {entry['sub_device']}, sub_system_name: {entry['sub_system_name']}")
+    vendor_list = list(vendor_dict.values())
+    return vendor_list
 
-        output['labels'].append(labels)
-        output['data'].append(entry['entry_id'])
-
-    return output
-
-
-@app.get("/api/getHardware")
-async def get_hardware():
+# API 路由：用于获取所有 pci_hardware 数据
+@app.get("/api/pci_hardware/get", response_model=list)
+async def get_pci_hardware():
+    db = SessionLocal()
     try:
-        hardware_data = get_hardware_data()
-        formatted_data = format_output(hardware_data)
-        return formatted_data
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        query = db.execute(select(pci_hardware)).all()
+        pci_hardware_data = parse_data_to_json(query)
+        return pci_hardware_data
+    finally:
+        db.close()
+
+
+
+
 
 if __name__ == "__main__":
     import uvicorn
