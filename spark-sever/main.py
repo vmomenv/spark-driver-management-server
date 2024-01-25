@@ -11,6 +11,8 @@ from sqlalchemy_utils import database_exists, create_database
 from fastapi import File, UploadFile
 from fastapi.responses import JSONResponse
 from pathlib import Path
+from typing import Set
+
 import os
 import json
 # 创建 FastAPI 应用
@@ -262,64 +264,81 @@ pci_hardware = Table(
 # 将数据库查询结果转为 JSON 格式
 
 # 标准解析逻辑
-def parse_pci_hardware_data(rows):
-    grouped_data = groupby(rows, key=lambda x: (x["vendor"], x["sub_device"]))
-    result = []
+def parse_pci_hardware_data(data_list: List[dict]) -> List[dict]:
+    vendors = []
+    sub_device_set: Set[str] = set()
 
-    for (vendor, sub_device), vendor_rows in grouped_data:
-        vendor_rows = list(vendor_rows)
+    for data in data_list:
+        vendor_value = data["vendor"]
+        vendor_label = data["vendor_name"]
 
-        entry = {
-            "value": vendor,
-            "label": vendor_rows[0]["vendor_name"],
-        }
+        # 检查 vendor 是否已存在
+        vendor_exists = any(vendor["value"] == vendor_value for vendor in vendors)
 
-        device_entries = []
+        if not vendor_exists:
+            vendor_object = {"value": vendor_value, "label": vendor_label}
 
-        for row in vendor_rows:
-            if row["device_id"]:
-                device_entry = {
-                    "value": row["device_id"],
-                    "label": row["device_name"],
-                }
+            if data["device_id"]:
+                device_object = {"value": data["device_id"], "label": data["device_name"]}
 
-                if row["sub_device"]:
-                    sub_entries = device_entry.get("children", [])
-                    sub_entries.append({
-                        "value": row["sub_device"],
-                        "label": row["sub_system_name"],
-                    })
-                    device_entry["children"] = sub_entries
+                if data["sub_device"]:
+                    sub_device_key = f"{data['sub_device']}_{data['sub_system_name']}"
 
-                device_entries.append(device_entry)
+                    if sub_device_key not in sub_device_set:
+                        sub_device_set.add(sub_device_key)
 
-        if device_entries:
-            entry["children"] = device_entries
+                        sub_device_object = {"value": data["sub_device"], "label": data["sub_system_name"]}
+                        device_object["children"] = [sub_device_object]
 
-        result.append(entry)
+                vendor_object["children"] = [device_object]
 
-    # 合并相同 vendor 的数据
-    grouped_by_vendor = groupby(result, key=lambda x: x["value"])
-    final_result = []
-
-    for vendor, vendor_entries in grouped_by_vendor:
-        vendor_entries = list(vendor_entries)
-
-        if len(vendor_entries) == 1:
-            final_result.append(vendor_entries[0])
+            vendors.append(vendor_object)
         else:
-            combined_entry = {
-                "value": vendor,
-                "label": vendor_entries[0]["label"],
-                "children": []
-            }
+            # 如果 vendor 已存在，查找并添加 device 数据
+            existing_vendor = next(vendor for vendor in vendors if vendor["value"] == vendor_value)
 
-            for entry in vendor_entries:
-                combined_entry["children"].extend(entry.get("children", []))
+            if data["device_id"]:
+                device_exists = any(
+                    device["value"] == data["device_id"] for device in existing_vendor.get("children", []))
 
-            final_result.append(combined_entry)
+                if not device_exists:
+                    device_object = {"value": data["device_id"], "label": data["device_name"]}
 
-    return final_result
+                    if data["sub_device"]:
+                        sub_device_key = f"{data['sub_device']}_{data['sub_system_name']}"
+
+                        if sub_device_key not in sub_device_set:
+                            sub_device_set.add(sub_device_key)
+
+                            sub_device_object = {"value": data["sub_device"], "label": data["sub_system_name"]}
+                            device_object["children"] = [sub_device_object]
+
+                    if "children" not in existing_vendor:
+                        existing_vendor["children"] = []
+
+                    existing_vendor["children"].append(device_object)
+
+            # 添加 sub_device 数据
+            if data["sub_device"]:
+                sub_device_key = f"{data['sub_device']}_{data['sub_system_name']}"
+
+                device_exists = any(
+                    device["value"] == data["device_id"] for device in existing_vendor.get("children", []))
+
+                if device_exists:
+                    existing_device = next(
+                        device for device in existing_vendor["children"] if device["value"] == data["device_id"])
+
+                    if "children" not in existing_device:
+                        existing_device["children"] = []
+
+                    if sub_device_key not in sub_device_set:
+                        sub_device_set.add(sub_device_key)
+
+                        sub_device_object = {"value": data["sub_device"], "label": data["sub_system_name"]}
+                        existing_device["children"].append(sub_device_object)
+
+    return vendors
 
 # 将数据库查询结果转为标准解析逻辑的 JSON 格式
 @app.get("/api/pci_hardware/get", response_model=list)
@@ -343,6 +362,8 @@ async def get_pci_hardware():
         return hardware_data
     finally:
         db.close()
+
+# 将数据库查询结果转为标准解析逻辑的 JSON 格式
 
 
 if __name__ == "__main__":
