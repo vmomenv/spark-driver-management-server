@@ -276,10 +276,10 @@ def parse_pci_hardware_data(data_list: List[dict]) -> List[dict]:
         vendor_exists = any(vendor["value"] == vendor_value for vendor in vendors)
 
         if not vendor_exists:
-            vendor_object = {"value": vendor_value, "label": vendor_label}
+            vendor_object = {"value": vendor_value, "label": f"{vendor_value} - {vendor_label}"}
 
             if data["device_id"]:
-                device_object = {"value": data["device_id"], "label": data["device_name"]}
+                device_object = {"value": data["device_id"], "label": f"{data['entry_id']} - {data['device_name']}"}
 
                 if data["sub_device"]:
                     sub_device_key = f"{data['sub_device']}_{data['sub_system_name']}"
@@ -287,7 +287,8 @@ def parse_pci_hardware_data(data_list: List[dict]) -> List[dict]:
                     if sub_device_key not in sub_device_set:
                         sub_device_set.add(sub_device_key)
 
-                        sub_device_object = {"value": data["sub_device"], "label": data["sub_system_name"]}
+                        sub_device_object = {"value": data["sub_device"],
+                                             "label": f"{data['sub_device']} - {data['sub_system_name']}"}
                         device_object["children"] = [sub_device_object]
 
                 vendor_object["children"] = [device_object]
@@ -302,7 +303,8 @@ def parse_pci_hardware_data(data_list: List[dict]) -> List[dict]:
                     device["value"] == data["device_id"] for device in existing_vendor.get("children", []))
 
                 if not device_exists:
-                    device_object = {"value": data["device_id"], "label": data["device_name"]}
+                    device_object = {"value": data["device_id"],
+                                     "label": f"{data['entry_id']} - {data['device_name']}"}
 
                     if data["sub_device"]:
                         sub_device_key = f"{data['sub_device']}_{data['sub_system_name']}"
@@ -310,7 +312,8 @@ def parse_pci_hardware_data(data_list: List[dict]) -> List[dict]:
                         if sub_device_key not in sub_device_set:
                             sub_device_set.add(sub_device_key)
 
-                            sub_device_object = {"value": data["sub_device"], "label": data["sub_system_name"]}
+                            sub_device_object = {"value": data["sub_device"],
+                                                 "label": f"{data['entry_id']} - {data['sub_system_name']}"}
                             device_object["children"] = [sub_device_object]
 
                     if "children" not in existing_vendor:
@@ -335,13 +338,15 @@ def parse_pci_hardware_data(data_list: List[dict]) -> List[dict]:
                     if sub_device_key not in sub_device_set:
                         sub_device_set.add(sub_device_key)
 
-                        sub_device_object = {"value": data["sub_device"], "label": data["sub_system_name"]}
+                        sub_device_object = {"value": data["sub_device"],
+                                             "label": f"{data['entry_id']} - {data['sub_system_name']}"}
                         existing_device["children"].append(sub_device_object)
 
     return vendors
 
+
 # 将数据库查询结果转为标准解析逻辑的 JSON 格式
-@app.get("/api/pci_hardware/get", response_model=list)
+@app.get("/api/pci_hardware/refresh", response_model=list)
 async def get_pci_hardware():
     db = SessionLocal()
     try:
