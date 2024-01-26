@@ -345,6 +345,44 @@ def parse_pci_hardware_data(data_list: List[dict]) -> List[dict]:
     return vendors
 
 
+def parse_usb_hardware_data(data_list: List[dict]) -> List[dict]:
+    vendors = []
+
+    for data in data_list:
+        vendor_value = data["vendor"]
+        vendor_label = data["vendor_name"]
+
+        # 检查 vendor 是否已存在
+        vendor_exists = any(vendor["value"] == vendor_value for vendor in vendors)
+
+        if not vendor_exists:
+            vendor_object = {"value": vendor_value, "label": f"{vendor_value} - {vendor_label}"}
+
+            if data["device_id"]:
+                device_object = {"value": data["device_id"], "label": f"{data['entry_id']} - {data['device_name']}"}
+                vendor_object["children"] = [device_object]
+
+            vendors.append(vendor_object)
+        else:
+            # 如果 vendor 已存在，查找并添加 device 数据
+            existing_vendor = next(vendor for vendor in vendors if vendor["value"] == vendor_value)
+
+            if data["device_id"]:
+                device_exists = any(
+                    device["value"] == data["device_id"] for device in existing_vendor.get("children", []))
+
+                if not device_exists:
+                    device_object = {"value": data["device_id"],
+                                     "label": f"{data['entry_id']} - {data['device_name']}"}
+
+                    if "children" not in existing_vendor:
+                        existing_vendor["children"] = []
+
+                    existing_vendor["children"].append(device_object)
+
+    return vendors
+
+
 # 将数据库查询结果转为标准解析逻辑的 JSON 格式
 @app.get("/api/pci_hardware/refresh", response_model=list)
 async def get_pci_hardware():
@@ -368,6 +406,35 @@ async def get_pci_hardware():
     finally:
         db.close()
 
+usb_hardware = Table(
+    'usb_hardware',
+    metadata,
+    Column('id', Integer, primary_key=True, autoincrement=True),
+    Column('vendor', String(50)),
+    Column('vendor_name', String(255)),
+    Column('device_id', String(50)),
+    Column('device_name', String(255)),
+    Column('entry_id', String(50)),
+
+)
+@app.get("/api/usb_hardware/refresh", response_model=list)
+async def get_pci_hardware():
+    db = SessionLocal()
+    try:
+        query = db.query(usb_hardware).all()
+        hardware_data = parse_usb_hardware_data([
+            {
+                "vendor": row.vendor,
+                "vendor_name": row.vendor_name,
+                "device_id": row.device_id,
+                "device_name": row.device_name,
+                "entry_id": row.entry_id
+            }
+            for row in query
+        ])
+        return hardware_data
+    finally:
+        db.close()
 # 将数据库查询结果转为标准解析逻辑的 JSON 格式
 
 
