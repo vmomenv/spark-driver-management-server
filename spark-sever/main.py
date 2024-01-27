@@ -382,10 +382,20 @@ def parse_usb_hardware_data(data_list: List[dict]) -> List[dict]:
 
     return vendors
 
+def save_to_local(data, filename):
+    with open(filename, "w") as file:
+        json.dump(data, file, indent=2)
 
 # 将数据库查询结果转为标准解析逻辑的 JSON 格式
-@app.get("/api/pci_hardware/refresh", response_model=list)
+@app.get("/api/pci_hardware/get", response_model=list)
 async def get_pci_hardware():
+    # 如果文件存在，直接返回文件内容
+    if os.path.exists("pci.json"):
+        with open("pci.json", "r") as file:
+            file_content = json.load(file)
+            print("直接推送数据")
+        return file_content
+
     db = SessionLocal()
     try:
         query = db.query(pci_hardware).all()
@@ -402,6 +412,7 @@ async def get_pci_hardware():
             }
             for row in query
         ])
+        save_to_local(hardware_data, "pci.json")
         return hardware_data
     finally:
         db.close()
@@ -417,8 +428,13 @@ usb_hardware = Table(
     Column('entry_id', String(50)),
 
 )
-@app.get("/api/usb_hardware/refresh", response_model=list)
+@app.get("/api/usb_hardware/get", response_model=list)
 async def get_pci_hardware():
+    if os.path.exists("pci.json"):
+        with open("usb.json", "r") as file:
+            file_content = json.load(file)
+            print("直接推送数据")
+        return file_content
     db = SessionLocal()
     try:
         query = db.query(usb_hardware).all()
@@ -432,6 +448,7 @@ async def get_pci_hardware():
             }
             for row in query
         ])
+        save_to_local(hardware_data, "usb.json")
         return hardware_data
     finally:
         db.close()
