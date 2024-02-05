@@ -62,6 +62,7 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=default_engi
 class UserCreate(BaseModel):
     username: str
     password: str
+    roleid: int
     email: str
 
 
@@ -158,22 +159,22 @@ def get_menu() -> Dict:
             "url": "User.vue"
         },
         {
-            "label": "其他",
+            "label": "硬件列表",
             "icon": "location",
             "children": [
                 {
-                    "path": "/page1",
-                    "name": "page1",
-                    "label": "页面1",
+                    "path": "/pcilist",
+                    "name": "pcilist",
+                    "label": "PCI列表",
                     "icon": "setting",
-                    "url": "PageOne.vue"
+                    "url": "PciList.vue"
                 },
                 {
-                    "path": "/page2",
-                    "name": "page2",
-                    "label": "页面2",
+                    "path": "/usblist",
+                    "name": "usblist",
+                    "label": "USB列表",
                     "icon": "setting",
-                    "url": "PageTwo.vue"
+                    "url": "UsbList.vue"
                 }
             ]
         }
