@@ -49,8 +49,9 @@ users = Table(
     Column('username', String(50), unique=True),
     Column('password', String(255)),
     Column('email', String(100), unique=True),
-    Column('created_at', DateTime, default=datetime.now),
-    Column('last_login', DateTime, default=datetime.now)
+    Column('created_at', String(50)),
+    Column('role_id', Integer),
+    Column('last_login', String(50))
 )
 
 # 创建数据库会话
@@ -72,6 +73,7 @@ async def create_user(user: UserCreate):
         db.execute(users.insert().values(
             username=user.username,
             password=user.password,
+            role_id=user.roleid,
             email=user.email
         ))
         db.commit()
@@ -91,6 +93,7 @@ async def edit_user(user_id: int, user: UserCreate):
         db.execute(users.update().where(users.c.user_id == user_id).values(
             username=user.username,
             password=user.password,
+            role_id=user.roleid,
             email=user.email
         ))
         db.commit()

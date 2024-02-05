@@ -47,6 +47,7 @@ users = Table(
     Column('password', String(255)),
     Column('email', String(100), unique=True),
     Column('created_at', String(50)),
+    Column('role_id', Integer),
     Column('last_login', String(50))
 )
 
@@ -58,14 +59,7 @@ roles = Table(
     Column('role_name', String(50), unique=True)
 )
 
-# 定义用户角色关联表格
-user_roles = Table(
-    'user_roles',
-    metadata,
-    Column('id', Integer, primary_key=True),
-    Column('user_id', Integer),
-    Column('role_id', Integer)
-)
+
 
 # 定义硬件表
 pci_hardware = Table(
