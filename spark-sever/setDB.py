@@ -51,14 +51,6 @@ users = Table(
     Column('last_login', String(50))
 )
 
-# 定义角色表格
-roles = Table(
-    'roles',
-    metadata,
-    Column('role_id', Integer, primary_key=True),
-    Column('role_name', String(50), unique=True)
-)
-
 
 
 # 定义硬件表
