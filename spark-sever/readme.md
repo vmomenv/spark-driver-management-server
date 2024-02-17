@@ -28,5 +28,7 @@ jose: 用于JWT（JSON Web Token）支持。
 `pip install sqlalchemy_utils`
 `pip install pydantic`
 `pip install python-multipart`
+pyJWT json web token 
+`pip install python-jose`
 运行
 `uvicorn main:app --reload`
