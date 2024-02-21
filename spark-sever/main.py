@@ -199,7 +199,7 @@ async def edit_user(user_id: int, user: UserCreate):
 
 # API 路由：用于删除用户
 @app.delete("/api/user/del/{user_id}")
-async def delete_user(user_id: int):
+async def delete_user(user_id: int,user=Depends(get_current_user)):
     db = SessionLocal()
     try:
         db.execute(users.delete().where(users.c.user_id == user_id))

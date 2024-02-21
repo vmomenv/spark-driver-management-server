@@ -3,3 +3,4 @@
 spark-sever/config.ini
 spark-sever/secretkey.ini
 ./spark-driver-repo
+__pycache__
