@@ -105,11 +105,10 @@ driver = Table(
     Column('version', String(50)),
     Column('file_size', Integer),
     Column('description', String(500)),
-    Column('hardware_device', String(255)),
-    Column('hardware_type', String(255)),
-    Column('system_version', String(255))
+    Column('pci_device', String(255)),
+    Column('usb_device', String(255)),
+    Column('system_version', String(255)),
 )
-
 # 定义硬件驱动关联表
 hardware_driver = Table(
     'hardware_driver',

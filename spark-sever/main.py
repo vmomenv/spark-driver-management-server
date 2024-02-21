@@ -282,60 +282,66 @@ def get_menu() -> Dict:
 
     return response_data
 # 文件上传
-@app.post("/api/upload_driver/")
+driver = Table(
+    'driver',
+    metadata,
+    Column('driver_id', Integer, primary_key=True, autoincrement=True),
+    Column('file_name', String(255)),
+    Column('package_name', String(255)),
+    Column('version', String(50)),
+    Column('file_size', Integer),
+    Column('description', String(500)),
+    Column('pci_device', String(255)),
+    Column('usb_device', String(255)),
+    Column('system_version', String(255))
+)
+
+@app.post("/api/upload_driver")
 async def upload_driver(
-        driver_file: UploadFile = File(...),
-        hardware_type: str = Form(...),
-        package_name: str = Form(...),
-        version: str = Form(None),
-        size: int = Form(None),
-        description: str = Form(None),
-        applicable_devices: str = Form(None),
-        system_version: str = Form(None)
+    driver_file: UploadFile = File(...),
+    file_name: str = Form(...),
+    package_name: str = Form(...),
+    version: str = Form(...),
+    file_size: int = Form(...),
+    description: str = Form(...),
+    pci_device: str = Form(...),
+    usb_device: str = Form(...),
+    system_version: str = Form(...),
 ):
-    # Define the directory path based on hardware_type and package_name
-    driver_dir = f"../spark-driver-repo/{hardware_type}/{package_name}/"
-    json_file_path = f"{driver_dir}/data.json"
-
-    # Create directories if they don't exist
-    Path(driver_dir).mkdir(parents=True, exist_ok=True)
-
     try:
-        # Save the uploaded file to the specified directory
-        file_path = os.path.join(driver_dir, driver_file.filename)
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(driver_file.file, buffer)
+        # 将上传的文件保存到指定的文件夹
+        upload_folder = f"../spark-driver-repo/{package_name}"
+        os.makedirs(upload_folder, exist_ok=True)  # 如果不存在则创建目录
+        file_path = f"{upload_folder}/{driver_file.filename}"
 
-        # Optionally, create a JSON object to store metadata if needed
-        metadata = {
-            "hardware_type": hardware_type,
-            "package_name": package_name,
-            "version": version,
-            "size": size,
-            "description": description,
-            "applicable_devices": applicable_devices,
-            "system_version": system_version
-        }
+        with open(file_path, "wb") as f:
+            f.write(driver_file.file.read())
 
-        # Save metadata to a JSON file in the same directory if needed
-        if any(metadata.values()):
-            with open(json_file_path, "w") as json_file:
-                json.dump(metadata, json_file)
+        # 将数据插入数据库
+        db = SessionLocal()
+        try:
+            db.execute(driver.insert().values(
+                file_name=file_name,
+                package_name=package_name,
+                version=version,
+                file_size=file_size,
+                description=description,
+                pci_device=pci_device,
+                usb_device=usb_device,
+                system_version=system_version,
+            ))
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            return {"message": f"将数据保存到数据库时出错: {str(e)}"}
+        finally:
+            db.close()
 
+        # 返回响应
+        return {"message": "文件和数据上传成功", "file_path": file_path}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to upload file: {str(e)}")
-
-    return {
-        "message": "File uploaded successfully",
-        "filename": driver_file.filename,
-        "hardware_type": hardware_type,
-        "package_name": package_name,
-        "version": version,
-        "size": size,
-        "description": description,
-        "applicable_devices": applicable_devices,
-        "system_version": system_version
-    }
+        # 处理文件上传或处理过程中可能发生的任何错误
+        return {"message": f"上传文件或保存数据时出错: {str(e)}"}
 
 
 @app.post("/uploadfile/")
