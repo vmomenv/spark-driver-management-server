@@ -30,5 +30,6 @@ jose: 用于JWT（JSON Web Token）支持。
 `pip install python-multipart`
 pyJWT json web token 
 `pip install python-jose`
+`pip install bcrypt`
 运行
 `uvicorn main:app --reload`

@@ -60,7 +60,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 metadata = MetaData()
 
 # 登录接口
-@app.post("/token")
+@app.post("/api/token")
 
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
     user = authenticate_user(form_data.username, form_data.password)
