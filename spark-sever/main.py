@@ -1,7 +1,7 @@
 import shutil
 from itertools import groupby
 
-from fastapi import FastAPI, Form, HTTPException
+from fastapi import FastAPI, Form, HTTPException,Header
 from pydantic import BaseModel
 from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String, DateTime,select
 from sqlalchemy.orm import sessionmaker
@@ -11,7 +11,7 @@ from sqlalchemy_utils import database_exists, create_database
 from fastapi import File, UploadFile
 from fastapi.responses import JSONResponse
 from pathlib import Path
-from typing import Set
+from typing import Set,Annotated
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
@@ -60,6 +60,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 metadata = MetaData()
 
 # 登录接口
+# 用户密码加密校验采用bcrypt算法
 @app.post("/api/token")
 
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
@@ -78,7 +79,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     return {"access_token": access_token, "token_type": "bearer"}
 
 # 验证token的函数
-def get_current_user(token: str = Depends(oauth2_scheme)):
+def get_current_user(token ):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -88,9 +89,9 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
         if username is None:
-            raise credentials_exception
+            return None
     except JWTError:
-        raise credentials_exception
+        return None
 
     return username
 
@@ -179,7 +180,14 @@ async def create_user(user: UserCreate):
 
 # API 路由：用于编辑用户
 @app.put("/api/user/edit/{user_id}")
-async def edit_user(user_id: int, user: UserCreate):
+async def edit_user(user_id: int, user: UserCreate,token:Annotated[str|None,Header()]=None):
+    if token is None:
+        # tongxia
+        return {"message": "token is None1"}
+    username=get_current_user(token)
+    if username is None:
+        # fanhui baocuo, chongdingxiang dengluye
+        return {"message": "token is None2"}
     db = SessionLocal()
     try:
         db.execute(users.update().where(users.c.user_id == user_id).values(
@@ -199,7 +207,14 @@ async def edit_user(user_id: int, user: UserCreate):
 
 # API 路由：用于删除用户
 @app.delete("/api/user/del/{user_id}")
-async def delete_user(user_id: int,user=Depends(get_current_user)):
+async def delete_user(user_id: int,token:Annotated[str|None,Header()]=None):
+    if token is None:
+        # tongxia
+        return {"message": "token is None1"}
+    username=get_current_user(token)
+    if username is None:
+        # fanhui baocuo, chongdingxiang dengluye
+        return {"message": "token is None2"}
     db = SessionLocal()
     try:
         db.execute(users.delete().where(users.c.user_id == user_id))
@@ -217,7 +232,14 @@ from typing import List, Dict
 
 
 @app.get("/api/user/getUser", response_model=List[dict])
-async def get_users():
+async def get_users(token:Annotated[str|None,Header()]=None):
+    if token is None:
+        # tongxia
+        return {"message": "token is None1"}
+    username=get_current_user(token)
+    if username is None:
+        # fanhui baocuo, chongdingxiang dengluye
+        return {"message": "token is None2"}
     db = SessionLocal()
     try:
         query = db.query(users).all()
@@ -226,7 +248,14 @@ async def get_users():
     finally:
         db.close()
 @app.post("/api/permission/getMenu")
-def get_menu() -> Dict:
+def get_menu(token:Annotated[str|None,Header()]=None)-> Dict:
+    if token is None:
+        # tongxia
+        return {"message": "token is None1"}
+    username=get_current_user(token)
+    if username is None:
+        # fanhui baocuo, chongdingxiang dengluye
+        return {"message": "token is None2"}
     menu = [
         {
             "path": "/home",
@@ -275,7 +304,6 @@ def get_menu() -> Dict:
         "code": 20000,
         "data": {
             "menu": menu,
-            "token": "114514",  # Replace this with your actual token
             "message": "获取成功"
         }
     }
