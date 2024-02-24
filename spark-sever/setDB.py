@@ -74,6 +74,7 @@ usb_hardware = Table(
     Column('vendor', String(50)),
     Column('vendor_name', String(255)),
     Column('device_id', String(50)),
+    Column('device_id', String(50)),
     Column('device_name', String(255)),
     Column('entry_id', String(50)),
 
@@ -104,10 +105,7 @@ driver = Table(
     Column('package_name', String(255)),
     Column('version', String(50)),
     Column('file_size', Integer),
-    Column('description', String(500)),
-    Column('pci_device', String(255)),
-    Column('usb_device', String(255)),
-    Column('system_version', String(255)),
+    Column('description', String(500))
 )
 # 定义硬件驱动关联表
 hardware_driver = Table(
@@ -115,9 +113,30 @@ hardware_driver = Table(
     metadata,
     Column('id', Integer, primary_key=True, autoincrement=True),
     Column('hardware_id', Integer),
-    Column('driver_id', Integer)
+    Column('driver_id', Integer),
+    Column('type', String(50)),
 )
 
+system_table = Table(
+    'system_table',
+    metadata,
+    Column('id', Integer, primary_key=True, autoincrement=True),
+    Column('system_name', String(50))
+)
+
+system_version_driver = Table(
+    'system_version_driver',
+    metadata,
+    Column('system_version_id', Integer, primary_key=True),
+    Column('driver_id', Integer)
+)
+system_version_table = Table(
+    'system_version_table',
+    metadata,
+    Column('id', Integer, primary_key=True, autoincrement=True),
+    Column('system_table_id', Integer),
+    Column('system_version_id', String(50))
+)
 
 
 # 创建表格
