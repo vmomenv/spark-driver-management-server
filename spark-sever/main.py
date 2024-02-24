@@ -611,7 +611,36 @@ async def search_pci_vendor(query: str):
     finally:
         db.close()
 
-    return options
+usb_vendor =Table(
+    'usb_vendor',
+    metadata,
+    Column('id', Integer, primary_key=True, autoincrement=True),
+    Column('vendor', String(50)),
+    Column('vendor_name', String(255)),
+    Column('combined_column', String(255)),  # 合并的列
+)
+@app.get("/api/searchUsbVendor")
+async def search_usb_vendor(query: str):
+    db = SessionLocal()
+
+    try:
+        stmt = select([usb_vendor.c.id, usb_vendor.c.vendor_name]).where(
+            usb_vendor.c.vendor_name.ilike(f"%{query}%")
+        )
+        results = db.execute(stmt).all()
+
+        options = [
+            {"value": result.id, "label": result.vendor_name}
+            for result in results
+        ]
+
+        return options
+    finally:
+        db.close()
+
+
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8000)
