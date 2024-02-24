@@ -8,7 +8,7 @@ from sqlalchemy.orm import sessionmaker
 from datetime import datetime
 import configparser
 from sqlalchemy_utils import database_exists, create_database
-from fastapi import File, UploadFile
+from fastapi import File, UploadFile,Request
 from fastapi.responses import JSONResponse
 from pathlib import Path
 from typing import Set,Annotated
@@ -55,16 +55,20 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # 创建用于验证token的OAuth2PasswordBearer对象
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+# oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 metadata = MetaData()
+# 创建数据库会话
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=default_engine)
 
 # 登录接口
 # 用户密码加密校验采用bcrypt算法
 @app.post("/api/token")
 
-async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
-    user = authenticate_user(form_data.username, form_data.password)
+async def login_for_access_token(request:Request):
+    form_data=await request.body()
+    form_data=json.loads(form_data)
+    user = authenticate_user(form_data['username'], form_data['password'])
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -74,9 +78,9 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": form_data.username}, expires_delta=access_token_expires
+        data={"sub": form_data['username']}, expires_delta=access_token_expires
     )
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {'code':20000,"access_token": access_token, "token_type": "bearer"}
 
 # 验证token的函数
 def get_current_user(token ):
@@ -145,10 +149,6 @@ users = Table(
     Column('role_id', Integer),
     Column('last_login', String(50))
 )
-
-# 创建数据库会话
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=default_engine)
-
 
 # 模型：用于输入数据验证
 class UserCreate(BaseModel):
@@ -583,7 +583,35 @@ async def get_pci_hardware():
         db.close()
 # 将数据库查询结果转为标准解析逻辑的 JSON 格式
 
+pci_vendor = Table(
+    'pci_vendor',
+    metadata,
+    Column('id', Integer, primary_key=True, autoincrement=True),
+    Column('vendor', String(50)),
+    Column('vendor_name', String(255)),
+    Column('combined_column', String(255)),
+)
+@app.get("/api/searchPciVendor")
+async def search_pci_vendor(query: str):
+    db = SessionLocal()
 
+    try:
+        stmt = select([pci_vendor.c.id, pci_vendor.c.vendor_name]).where(
+            pci_vendor.c.vendor_name.ilike(f"%{query}%")
+        )
+        results = db.execute(stmt).all()
+
+        options = [
+            {"value": result.id, "label": result.vendor_name}
+            for result in results
+        ]
+
+        return options
+
+    finally:
+        db.close()
+
+    return options
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8000)
