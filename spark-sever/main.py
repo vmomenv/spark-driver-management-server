@@ -638,7 +638,38 @@ async def search_usb_vendor(query: str):
     finally:
         db.close()
 
+@app.get("/api/getPciHardwareByVendor")
+async def get_pcihardware_by_vendor(vendor: str):
+    # 执行查询
+    db = SessionLocal()
+    query = pci_hardware.select().where(pci_hardware.c.vendor == vendor)
+    result = db.execute(query).fetchall()
+    db.close()
 
+    # 处理结果
+    if not result:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+
+    # 将结果转换为字典形式
+    return [{'id': row.id, 'vendor': row.vendor, 'vendor_name': row.vendor_name, 'device_id': row.device_id,
+             'device_name': row.device_name, 'sub_vendor': row.sub_vendor, 'sub_device': row.sub_device,
+             'sub_system_name': row.sub_system_name, 'entry_id': row.entry_id} for row in result]
+
+@app.get("/api/getUsbHardwareByVendor")
+async def get_usbhardware_by_vendor(vendor: str):
+    # 执行查询
+    db = SessionLocal()
+    query =usb_hardware.select().where(usb_hardware.c.vendor == vendor)
+    result = db.execute(query).fetchall()
+    db.close()
+
+    # 处理结果
+    if not result:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+
+    # 将结果转换为字典形式
+    return [{'id': row.id, 'vendor': row.vendor, 'vendor_name': row.vendor_name, 'device_id': row.device_id,
+             'device_name': row.device_name, 'entry_id': row.entry_id} for row in result]
 
 
 if __name__ == "__main__":
