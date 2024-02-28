@@ -70,11 +70,7 @@ async def login_for_access_token(request:Request):
     form_data=json.loads(form_data)
     user = authenticate_user(form_data['username'], form_data['password'])
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        return {'code': 200001, "message": "登录失败"}
 
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
@@ -84,11 +80,11 @@ async def login_for_access_token(request:Request):
 
 # 验证token的函数
 def get_current_user(token ):
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+    # credentials_exception = HTTPException(
+    #     status_code=status.HTTP_401_UNAUTHORIZED,
+    #     detail="Could not validate credentials",
+    #     headers={"WWW-Authenticate": "Bearer"},
+    # )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
@@ -249,7 +245,7 @@ async def get_users(token=Header()):
         db.close()
 @app.post("/api/permission/getMenu")
 def get_menu(token=Header())-> Dict:
-    print
+    print('**********',token)
     if token is None:
         # tongxia
         return {"message": "token is None1"}
