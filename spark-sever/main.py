@@ -11,7 +11,7 @@ from sqlalchemy_utils import database_exists, create_database
 from fastapi import File, UploadFile,Request
 from fastapi.responses import JSONResponse
 from pathlib import Path
-from typing import Set,Annotated
+from typing import Set
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
@@ -180,7 +180,7 @@ async def create_user(user: UserCreate):
 
 # API 路由：用于编辑用户
 @app.put("/api/user/edit/{user_id}")
-async def edit_user(user_id: int, user: UserCreate,token:Annotated[str|None,Header()]=None):
+async def edit_user(user_id: int, user: UserCreate,token=Header()):
     if token is None:
         # tongxia
         return {"message": "token is None1"}
@@ -207,7 +207,7 @@ async def edit_user(user_id: int, user: UserCreate,token:Annotated[str|None,Head
 
 # API 路由：用于删除用户
 @app.delete("/api/user/del/{user_id}")
-async def delete_user(user_id: int,token:Annotated[str|None,Header()]=None):
+async def delete_user(user_id: int,token=Header()):
     if token is None:
         # tongxia
         return {"message": "token is None1"}
@@ -232,7 +232,7 @@ from typing import List, Dict
 
 
 @app.get("/api/user/getUser", response_model=List[dict])
-async def get_users(token:Annotated[str|None,Header()]=None):
+async def get_users(token=Header()):
     if token is None:
         # tongxia
         return {"message": "token is None1"}
@@ -248,7 +248,8 @@ async def get_users(token:Annotated[str|None,Header()]=None):
     finally:
         db.close()
 @app.post("/api/permission/getMenu")
-def get_menu(token:Annotated[str|None,Header()]=None)-> Dict:
+def get_menu(token=Header())-> Dict:
+    print
     if token is None:
         # tongxia
         return {"message": "token is None1"}
