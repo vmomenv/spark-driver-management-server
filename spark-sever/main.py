@@ -40,7 +40,8 @@ default_db_uri = f"mysql+pymysql://{db_user}:{db_pass}@{db_host}:{db_port}/{defa
 # 创建默认数据库连接引擎
 default_engine = create_engine(default_db_uri,
                                poolclass=SingletonThreadPool,# 线程池
-                                echo=True)# 是否输出sql
+                               echo_pool=False,# 线程池输出
+                                echo=False)# 是否输出sql
 
 # 如果连接的默认数据库不存在，则创建
 if not database_exists(default_engine.url):
