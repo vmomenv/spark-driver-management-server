@@ -8,6 +8,7 @@ from sqlalchemy.orm import sessionmaker
 from datetime import datetime
 import configparser
 from sqlalchemy_utils import database_exists, create_database
+from sqlalchemy.pool import SingletonThreadPool
 from fastapi import File, UploadFile,Request
 from fastapi.responses import JSONResponse
 from pathlib import Path
@@ -37,7 +38,9 @@ default_db_name = config['database']['database_name']
 default_db_uri = f"mysql+pymysql://{db_user}:{db_pass}@{db_host}:{db_port}/{default_db_name}"
 
 # 创建默认数据库连接引擎
-default_engine = create_engine(default_db_uri)
+default_engine = create_engine(default_db_uri,
+                               poolclass=SingletonThreadPool,# 线程池
+                                echo=True)# 是否输出sql
 
 # 如果连接的默认数据库不存在，则创建
 if not database_exists(default_engine.url):
@@ -127,7 +130,7 @@ def get_user_by_username(username: str):
                 "role_id": query.role_id
             }
     finally:
-        db.close()
+        print('关闭连接')
 
 # 校验密码是否匹配
 def verify_password(plain_password, hashed_password):
@@ -171,7 +174,7 @@ async def create_user(user: UserCreate):
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to create user: {str(e)}")
     finally:
-        db.close()
+        print('关闭连接')
 
 
 # API 路由：用于编辑用户
@@ -198,7 +201,7 @@ async def edit_user(user_id: int, user: UserCreate,token=Header()):
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to update user: {str(e)}")
     finally:
-        db.close()
+        print('关闭连接')
 
 
 # API 路由：用于删除用户
@@ -220,7 +223,7 @@ async def delete_user(user_id: int,token=Header()):
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to delete user: {str(e)}")
     finally:
-        db.close()
+        print('关闭连接')
 
 
 # API 路由：用于获取所有用户信息
@@ -242,7 +245,7 @@ async def get_users(token=Header()):
         user_data = [{column: getattr(user, column) for column in users.columns.keys()} for user in query]
         return user_data
     finally:
-        db.close()
+        print('关闭连接')
 @app.post("/api/permission/getMenu")
 def get_menu(token=Header())-> Dict:
     print('**********',token)
@@ -360,7 +363,7 @@ async def upload_driver(
             db.rollback()
             return {"message": f"将数据保存到数据库时出错: {str(e)}"}
         finally:
-            db.close()
+            print('关闭连接')
 
         # 返回响应
         return {"message": "文件和数据上传成功", "file_path": file_path}
@@ -541,7 +544,7 @@ async def get_pci_hardware():
         save_to_local(hardware_data, "pci.json")
         return hardware_data
     finally:
-        db.close()
+        print('关闭连接')
 
 usb_hardware = Table(
     'usb_hardware',
@@ -577,7 +580,7 @@ async def get_pci_hardware():
         save_to_local(hardware_data, "usb.json")
         return hardware_data
     finally:
-        db.close()
+        print('关闭连接')
 # 将数据库查询结果转为标准解析逻辑的 JSON 格式
 
 pci_vendor = Table(
@@ -606,7 +609,7 @@ async def search_pci_vendor(query: str):
         return options
 
     finally:
-        db.close()
+        print('关闭连接')
 
 usb_vendor =Table(
     'usb_vendor',
@@ -633,7 +636,7 @@ async def search_usb_vendor(query: str):
 
         return options
     finally:
-        db.close()
+        print('关闭连接')
 
 @app.get("/api/getPciHardwareByVendor")
 async def get_pcihardware_by_vendor(vendor: str):
@@ -641,7 +644,7 @@ async def get_pcihardware_by_vendor(vendor: str):
     db = SessionLocal()
     query = pci_hardware.select().where(pci_hardware.c.vendor == vendor)
     result = db.execute(query).fetchall()
-    db.close()
+    print('关闭连接')
 
     # 处理结果
     if not result:
@@ -658,7 +661,7 @@ async def get_usbhardware_by_vendor(vendor: str):
     db = SessionLocal()
     query =usb_hardware.select().where(usb_hardware.c.vendor == vendor)
     result = db.execute(query).fetchall()
-    db.close()
+    print('关闭连接')
 
     # 处理结果
     if not result:
