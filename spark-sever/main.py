@@ -3,18 +3,18 @@ from itertools import groupby
 
 from fastapi import FastAPI, Form, HTTPException,Header
 from pydantic import BaseModel
-from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String, DateTime,select
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import  select
+
 from datetime import datetime
-import configparser
-from sqlalchemy_utils import database_exists, create_database
-from sqlalchemy.pool import SingletonThreadPool
+from self_db import *
+
+
 from fastapi import File, UploadFile,Request
-from fastapi.responses import JSONResponse
-from pathlib import Path
+# from fastapi.responses import JSONResponse
+# from pathlib import Path
 from typing import Set
-from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi import  HTTPException
+# from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
@@ -23,37 +23,9 @@ import json
 # 创建 FastAPI 应用
 app = FastAPI()
 
-# 读取配置文件
-config = configparser.ConfigParser()
-config.read('config.ini')
 
-# 获取数据库连接信息
-db_host = config['database']['host']
-db_port = config['database']['port']
-db_user = config['database']['username']
-db_pass = config['database']['password']
-default_db_name = config['database']['database_name']
 
-# 构建数据库连接 URI
-default_db_uri = f"mysql+pymysql://{db_user}:{db_pass}@{db_host}:{db_port}/{default_db_name}"
 
-# 创建默认数据库连接引擎
-default_engine = create_engine(default_db_uri,
-                               poolclass=SingletonThreadPool,# 线程池
-                               echo_pool=False,# 线程池输出
-                                echo=False)# 是否输出sql
-
-# 如果连接的默认数据库不存在，则创建
-if not database_exists(default_engine.url):
-    create_database(default_engine.url)
-
-# 读取secretkey
-secret_config = configparser.ConfigParser()
-config.read('secretkey.ini')
-# 获取数据
-SECRET_KEY = config['secretkey']['secret_key']
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 # 创建密码哈希上下文
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -61,9 +33,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # 创建用于验证token的OAuth2PasswordBearer对象
 # oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-metadata = MetaData()
-# 创建数据库会话
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=default_engine)
+
 
 # 登录接口
 # 用户密码加密校验采用bcrypt算法
@@ -137,18 +107,7 @@ def get_user_by_username(username: str):
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
 
-# 创建数据库表
-users = Table(
-    'users',
-    metadata,
-    Column('user_id', Integer, primary_key=True, autoincrement=True),
-    Column('username', String(50), unique=True),
-    Column('password', String(255)),
-    Column('email', String(100), unique=True),
-    Column('created_at', String(50)),
-    Column('role_id', Integer),
-    Column('last_login', String(50))
-)
+
 
 # 模型：用于输入数据验证
 class UserCreate(BaseModel):
@@ -310,20 +269,7 @@ def get_menu(token=Header())-> Dict:
     }
 
     return response_data
-# 文件上传
-driver = Table(
-    'driver',
-    metadata,
-    Column('driver_id', Integer, primary_key=True, autoincrement=True),
-    Column('file_name', String(255)),
-    Column('package_name', String(255)),
-    Column('version', String(50)),
-    Column('file_size', Integer),
-    Column('description', String(500)),
-    Column('pci_device', String(255)),
-    Column('usb_device', String(255)),
-    Column('system_version', String(255))
-)
+
 
 @app.post("/api/upload_driver")
 async def upload_driver(
@@ -377,19 +323,7 @@ async def upload_driver(
 async def create_upload_file(file: UploadFile):
     return {"filename": file.filename}
 
-pci_hardware = Table(
-    'pci_hardware',
-    metadata,
-    Column('id', Integer, primary_key=True, autoincrement=True),
-    Column('vendor', String(50)),
-    Column('vendor_name', String(255)),
-    Column('device_id', String(50)),
-    Column('device_name', String(255)),
-    Column('sub_vendor', String(50)),
-    Column('sub_device', String(50)),
-    Column('sub_system_name', String(255)),
-    Column('entry_id', String(50)),
-)
+
 
 # 将数据库查询结果转为 JSON 格式
 
@@ -547,17 +481,7 @@ async def get_pci_hardware():
     finally:
         print('关闭连接')
 
-usb_hardware = Table(
-    'usb_hardware',
-    metadata,
-    Column('id', Integer, primary_key=True, autoincrement=True),
-    Column('vendor', String(50)),
-    Column('vendor_name', String(255)),
-    Column('device_id', String(50)),
-    Column('device_name', String(255)),
-    Column('entry_id', String(50)),
 
-)
 @app.get("/api/usb_hardware/get", response_model=list)
 async def get_pci_hardware():
     if os.path.exists("pci.json"):
@@ -584,14 +508,7 @@ async def get_pci_hardware():
         print('关闭连接')
 # 将数据库查询结果转为标准解析逻辑的 JSON 格式
 
-pci_vendor = Table(
-    'pci_vendor',
-    metadata,
-    Column('id', Integer, primary_key=True, autoincrement=True),
-    Column('vendor', String(50)),
-    Column('vendor_name', String(255)),
-    Column('combined_column', String(255)),
-)
+
 @app.get("/api/searchPciVendor")
 async def search_pci_vendor(query: str):
     db = SessionLocal()
@@ -612,14 +529,7 @@ async def search_pci_vendor(query: str):
     finally:
         print('关闭连接')
 
-usb_vendor =Table(
-    'usb_vendor',
-    metadata,
-    Column('id', Integer, primary_key=True, autoincrement=True),
-    Column('vendor', String(50)),
-    Column('vendor_name', String(255)),
-    Column('combined_column', String(255)),  # 合并的列
-)
+
 @app.get("/api/searchUsbVendor")
 async def search_usb_vendor(query: str):
     db = SessionLocal()
@@ -674,15 +584,24 @@ async def get_usbhardware_by_vendor(vendor: str):
 
 @app.get("/api/FileDisplayByType")
 #根据硬件类型选文件如打印机驱动，网卡驱动等(看驱动属性）
+async def get_driver_list(request:Request):
+    # driver_type，驱动属性，网卡，pci
+    # hardId 硬件id
+    # driver_name 驱动名称
+    # vendor 厂商名
+    form_data=await request.body()
+    form_data=json.loads(form_data)
+    
 
-@app.get("/api/FindFilesByHardwareId")
-# 根据硬件ID选驱动文件（给出entry_id)
+
+# @app.get("/api/FindFilesByHardwareId")
+# # 根据硬件ID选驱动文件（给出entry_id)
 
 
-@app.get("/api/FindFilesByDriverName")
-# 根据驱动名称选驱动文件（客户端）
+# @app.get("/api/FindFilesByDriverName")
+# # 根据驱动名称选驱动文件（客户端）
 
-@app.get("/api/FindHardwareByVendor")
+# @app.get("/api/FindHardwareByVendor")
 # 根据厂商名选硬件名（前端）
 if __name__ == "__main__":
     import uvicorn
