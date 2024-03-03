@@ -3,21 +3,27 @@ from sqlalchemy_utils import database_exists, create_database
 from sqlalchemy.orm import sessionmaker
 import configparser
 from sqlalchemy.pool import SingletonThreadPool
-
+import os
+import shutil
+from unit import *
+import importlib
 
 # 读取配置文件
 config = configparser.ConfigParser()
-config.read('config.ini')
 
-# 获取数据库连接信息
-db_host = config['database']['host']
-db_port = config['database']['port']
-db_user = config['database']['username']
-db_pass = config['database']['password']
-default_db_name = config['database']['database_name']
+if not os.path.exists(CONFIG_FILE):
+    # 复制文件
+    shutil.copy(CONFIG_EXAMPLE_FILE, CONFIG_FILE)
+config.read(CONFIG_FILE)
+# 根据配置文件的数据库类型去导入对应的模块
+dbFactoryModule=importlib.import_module(f".{config['database']['type']}",package='db_factory')
+#  利用反射获取类名
+cls = getattr(dbFactoryModule,dbFactoryModule.class_name)
+# 实例化
+dbFactory=cls(config)
 
 # 构建数据库连接 URI
-default_db_uri = f"mysql+pymysql://{db_user}:{db_pass}@{db_host}:{db_port}/{default_db_name}"
+default_db_uri =dbFactory.get_db_url()
 
 # 创建默认数据库连接引擎
 default_engine = create_engine(default_db_uri,
