@@ -672,7 +672,18 @@ async def get_usbhardware_by_vendor(vendor: str):
     return [{'id': row.id, 'vendor': row.vendor, 'vendor_name': row.vendor_name, 'device_id': row.device_id,
              'device_name': row.device_name, 'entry_id': row.entry_id} for row in result]
 
+@app.get("/api/FileDisplayByType")
+#根据硬件类型选文件如打印机驱动，网卡驱动等(看驱动属性）
 
+@app.get("/api/FindFilesByHardwareId")
+# 根据硬件ID选驱动文件（给出entry_id)
+
+
+@app.get("/api/FindFilesByDriverName")
+# 根据驱动名称选驱动文件（客户端）
+
+@app.get("/api/FindHardwareByVendor")
+# 根据厂商名选硬件名（前端）
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8000)
