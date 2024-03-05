@@ -45,7 +45,7 @@ metadata = MetaData()
 # 创建数据库会话
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=default_engine)
 
-# 创建数据库表
+# 定义用户表格
 users = Table(
     'users',
     metadata,
@@ -59,21 +59,8 @@ users = Table(
 )
 
 
-# 文件上传
-driver = Table(
-    'driver',
-    metadata,
-    Column('driver_id', Integer, primary_key=True, autoincrement=True),
-    Column('file_name', String(255)),
-    Column('package_name', String(255)),
-    Column('version', String(50)),
-    Column('file_size', Integer),
-    Column('description', String(500)),
-    Column('pci_device', String(255)),
-    Column('usb_device', String(255)),
-    Column('system_version', String(255))
-)
 
+# 定义硬件表
 pci_hardware = Table(
     'pci_hardware',
     metadata,
@@ -87,7 +74,6 @@ pci_hardware = Table(
     Column('sub_system_name', String(255)),
     Column('entry_id', String(50)),
 )
-
 usb_hardware = Table(
     'usb_hardware',
     metadata,
@@ -95,17 +81,19 @@ usb_hardware = Table(
     Column('vendor', String(50)),
     Column('vendor_name', String(255)),
     Column('device_id', String(50)),
+    Column('device_id', String(50)),
     Column('device_name', String(255)),
     Column('entry_id', String(50)),
 
 )
+#定义厂商表
 pci_vendor = Table(
     'pci_vendor',
     metadata,
     Column('id', Integer, primary_key=True, autoincrement=True),
     Column('vendor', String(50)),
     Column('vendor_name', String(255)),
-    Column('combined_column', String(255)),
+    Column('combined_column', String(255)),  # 合并的列
 )
 usb_vendor =Table(
     'usb_vendor',
@@ -114,4 +102,45 @@ usb_vendor =Table(
     Column('vendor', String(50)),
     Column('vendor_name', String(255)),
     Column('combined_column', String(255)),  # 合并的列
+)
+# 定义驱动表
+driver = Table(
+    'driver',
+    metadata,
+    Column('driver_id', Integer, primary_key=True, autoincrement=True),
+    Column('file_name', String(255)),
+    Column('package_name', String(255)),
+    Column('version', String(50)),
+    Column('file_size', Integer),
+    Column('description', String(500))
+)
+# 定义硬件驱动关联表
+hardware_driver = Table(
+    'hardware_driver',
+    metadata,
+    Column('id', Integer, primary_key=True, autoincrement=True),
+    Column('hardware_id', Integer),
+    Column('driver_id', Integer),
+    Column('type', String(50)),
+)
+
+system_table = Table(
+    'system_table',
+    metadata,
+    Column('id', Integer, primary_key=True, autoincrement=True),
+    Column('system_name', String(50))
+)
+
+system_version_driver = Table(
+    'system_version_driver',
+    metadata,
+    Column('system_version_id', Integer, primary_key=True),
+    Column('driver_id', Integer)
+)
+system_version_table = Table(
+    'system_version_table',
+    metadata,
+    Column('id', Integer, primary_key=True, autoincrement=True),
+    Column('system_table_id', Integer),
+    Column('system_version_id', String(50))
 )
