@@ -31,13 +31,15 @@ dbFactory=cls(config)
 
 # 构建数据库连接 URI
 default_db_uri =dbFactory.get_db_url()
-
+connectArgs={}
+if config['database']['type']=='sqlite':
+    connectArgs['check_same_thread']=True
 # 创建默认数据库连接引擎
 default_engine = create_engine(default_db_uri,
                                poolclass=SingletonThreadPool,# 线程池
                                echo_pool=False,# 线程池输出
-                               connect_args={'check_same_thread': False},# 多线程
-                                echo=False)# 是否输出sql
+                               connect_args=connectArgs,# 多线程
+                                echo=True)# 是否输出sql
 
 # 如果连接的默认数据库不存在，则创建
 if not database_exists(default_engine.url):

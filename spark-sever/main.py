@@ -584,16 +584,17 @@ async def get_usbhardware_by_vendor(vendor: str):
 
 @app.get("/api/FileDisplayByType")
 #根据硬件类型选文件如打印机驱动，网卡驱动等(看驱动属性）
-async def get_driver_list(request:Request):
+async def get_driver_list(driver_type,request:Request):
     # driver_type，驱动属性，usb，pci,common
     # hardId 硬件id
     # driver_name 驱动名称
     # vendor 厂商名
-    form_data=await request.body()
-    form_data=json.loads(form_data)
+    # form_data=await request.body()
+    print('-------------',driver_type)
+    # form_data=json.loads(form_data)
     db = SessionLocal()
     # select * from hardware_driver left join driver on driver.driver.id=hardware_driver.driver_id where type in ('','common')
-    query=hardware_driver.select().join(driver,driver.driver_id==hardware_driver.driver_id).where(hardware_driver.c.type.in_(form_data['driver_type'],'common'))
+    query=hardware_driver.select().join(driver,driver.c.driver_id==hardware_driver.c.driver_id).where(hardware_driver.c.type.in_([driver_type,'common']))
     result = db.execute(query).fetchall()
     print(result)
 
@@ -606,7 +607,7 @@ async def get_driver_list(request:Request):
 # # 根据驱动名称选驱动文件（客户端）
 
 # @app.get("/api/FindHardwareByVendor")
-# 根据厂商名选硬件名（前端）
+# 根据厂商名与PCI/USB信息 选硬件名（前端）
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8000)

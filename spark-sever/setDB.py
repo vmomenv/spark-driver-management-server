@@ -74,7 +74,6 @@ usb_hardware = Table(
     Column('vendor', String(50)),
     Column('vendor_name', String(255)),
     Column('device_id', String(50)),
-    Column('device_id', String(50)),
     Column('device_name', String(255)),
     Column('entry_id', String(50)),
 
