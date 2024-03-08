@@ -8,4 +8,4 @@ class SqliteDb(Base):
 
     def get_db_url(self):
         # SQLite connection URI for a file-based database
-        return f"sqlite:///{self.file_path}"
+        return f'sqlite:///{self.file_path}'

@@ -8,12 +8,19 @@ import shutil
 from unit import *
 import importlib
 
+import random
+import string
+ 
+def generate_random_string(length):
+    letters = string.ascii_letters + string.digits # 包含大小写字母和数字
+    return ''.join([random.choice(letters) for _ in range(length)])
 # 读取配置文件
 config = configparser.ConfigParser()
 
 if not os.path.exists(CONFIG_FILE):
     # 复制文件
     shutil.copy(CONFIG_EXAMPLE_FILE, CONFIG_FILE)
+    
 config.read(CONFIG_FILE)
 # 根据配置文件的数据库类型去导入对应的模块
 dbFactoryModule=importlib.import_module(f".{config['database']['type']}",package='db_factory')
@@ -29,19 +36,29 @@ default_db_uri =dbFactory.get_db_url()
 default_engine = create_engine(default_db_uri,
                                poolclass=SingletonThreadPool,# 线程池
                                echo_pool=False,# 线程池输出
+                               connect_args={'check_same_thread': False},# 多线程
                                 echo=False)# 是否输出sql
 
 # 如果连接的默认数据库不存在，则创建
 if not database_exists(default_engine.url):
     create_database(default_engine.url)
+secretConfig = configparser.ConfigParser()
 # 读取secretkey
-
-config.read('secretkey.ini')
+if not os.path.exists(CONFIG_SECRET_KEY_FILE):
+    shutil.copy(CONFIG_SECRET_KEY_EXAMPLE_FILE,CONFIG_SECRET_KEY_FILE)
+    
+    secretConfig.read(CONFIG_SECRET_KEY_FILE)
+    secretKey=generate_random_string(72)
+    print(secretKey)
+    secretConfig.set('secretkey','secret_key',secretKey)
+    secretConfig.write(open(CONFIG_SECRET_KEY_FILE,'wt'))
+secretConfig.read(CONFIG_SECRET_KEY_FILE)
 # 获取数据
-SECRET_KEY = config['secretkey']['secret_key']
+SECRET_KEY = secretConfig['secretkey']['secret_key']
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 metadata = MetaData()
+metadata.create_all(default_engine,checkfirst=True)
 # 创建数据库会话
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=default_engine)
 
@@ -80,7 +97,6 @@ usb_hardware = Table(
     Column('id', Integer, primary_key=True, autoincrement=True),
     Column('vendor', String(50)),
     Column('vendor_name', String(255)),
-    Column('device_id', String(50)),
     Column('device_id', String(50)),
     Column('device_name', String(255)),
     Column('entry_id', String(50)),
