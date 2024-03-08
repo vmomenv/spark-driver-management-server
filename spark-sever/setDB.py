@@ -104,7 +104,8 @@ driver = Table(
     Column('package_name', String(255)),
     Column('version', String(50)),
     Column('file_size', Integer),
-    Column('description', String(500))
+    Column('description', String(500)),
+    Column('device_id', String(50))
 )
 # 定义硬件驱动关联表
 hardware_driver = Table(
@@ -113,7 +114,8 @@ hardware_driver = Table(
     Column('id', Integer, primary_key=True, autoincrement=True),
     Column('hardware_id', Integer),
     Column('driver_id', Integer),
-    Column('type', String(50)),
+    Column('hardware_type_id', String(50)),
+    Column('pci_usb_key', String(50))
 )
 
 system_table = Table(
