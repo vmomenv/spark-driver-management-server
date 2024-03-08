@@ -585,13 +585,17 @@ async def get_usbhardware_by_vendor(vendor: str):
 @app.get("/api/FileDisplayByType")
 #根据硬件类型选文件如打印机驱动，网卡驱动等(看驱动属性）
 async def get_driver_list(request:Request):
-    # driver_type，驱动属性，网卡，pci
+    # driver_type，驱动属性，usb，pci,common
     # hardId 硬件id
     # driver_name 驱动名称
     # vendor 厂商名
     form_data=await request.body()
     form_data=json.loads(form_data)
-    
+    db = SessionLocal()
+    # select * from hardware_driver left join driver on driver.driver.id=hardware_driver.driver_id where type in ('','common')
+    query=hardware_driver.select().join(driver,driver.driver_id==hardware_driver.driver_id).where(hardware_driver.c.type.in_(form_data['driver_type'],'common'))
+    result = db.execute(query).fetchall()
+    print(result)
 
 
 # @app.get("/api/FindFilesByHardwareId")
