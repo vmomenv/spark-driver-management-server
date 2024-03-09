@@ -1,5 +1,6 @@
 from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String, DateTime,select
 from sqlalchemy_utils import database_exists, create_database
+from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import configparser
 from sqlalchemy.pool import SingletonThreadPool
@@ -59,10 +60,10 @@ secretConfig.read(CONFIG_SECRET_KEY_FILE)
 SECRET_KEY = secretConfig['secretkey']['secret_key']
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
-metadata = MetaData()
-metadata.create_all(default_engine,checkfirst=True)
-# 创建数据库会话
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=default_engine)
+Base = declarative_base()
+metadata = Base.metadata
+
+
 
 # 定义用户表格
 users = Table(
@@ -76,7 +77,6 @@ users = Table(
     Column('role_id', Integer),
     Column('last_login', String(50))
 )
-
 
 
 # 定义硬件表
@@ -164,3 +164,6 @@ system_version_table = Table(
     Column('system_table_id', Integer),
     Column('system_version_id', String(50))
 )
+
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=default_engine)
+Base.metadata.create_all(default_engine, checkfirst=True)
