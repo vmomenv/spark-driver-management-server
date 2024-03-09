@@ -584,8 +584,8 @@ async def get_usbhardware_by_vendor(vendor: str):
 
 @app.get("/api/FileDisplayByType")
 #根据硬件类型选文件如打印机驱动，网卡驱动等(看驱动属性）
-async def get_driver_list(driver_type,request:Request):
-    # driver_type，驱动属性，usb，pci,common
+async def get_driver_list_by_type(driver_type,request:Request):
+    # driver_type，驱动属性，printer/network/VGA/camera
     # hardId 硬件id
     # driver_name 驱动名称
     # vendor 厂商名
@@ -594,20 +594,68 @@ async def get_driver_list(driver_type,request:Request):
     # form_data=json.loads(form_data)
     db = SessionLocal()
     # select * from hardware_driver left join driver on driver.driver.id=hardware_driver.driver_id where type in ('','common')
-    query=hardware_driver.select().join(driver,driver.c.driver_id==hardware_driver.c.driver_id).where(hardware_driver.c.type.in_([driver_type,'common']))
+    query=hardware_driver.select().join(driver,driver.c.driver_id==hardware_driver.c.driver_id).where(hardware_driver.c.pci_usb_key==driver_type)
     result = db.execute(query).fetchall()
     print(result)
 
 
-# @app.get("/api/FindFilesByHardwareId")
+@app.get("/api/FindFilesByHardwareId")
 # # 根据硬件ID选驱动文件（给出entry_id)
+async def get_driver_list_by_hardware_id(driver_type,device_id):
+    db=SessionLocal()
+    if driver_type not in ['usb','pic']:
+        return '类型错误'
+    query=hardware_driver.select().join(driver,driver.c.driver_id==hardware_driver.c.driver_id).where(hardware_driver.c.pci_usb_key==driver_type)
+    if driver_type=='usb':
+        query=query.join(usb_hardware,hardware_driver.c.hardware_id==usb_hardware.c.id) \
+            .where(usb_hardware.c.device_id==device_id)
+    else:
+        query=query.join(pci_hardware,hardware_driver.c.hardware_id==pci_hardware.c.id) \
+            .where(pci_hardware.c.device_id==device_id)
+    result=db.execute(query).fetchall()
+    print(result)
 
-
-# @app.get("/api/FindFilesByDriverName")
+@app.get("/api/FindFilesByDriverName")
 # # 根据驱动名称选驱动文件（客户端）
-
-# @app.get("/api/FindHardwareByVendor")
+async def get_driver_list_by_driver_name(device_name):
+    db=SessionLocal()
+    # 查usb，查pci，然后根据对应的类型去中间表去查，最后合并数据
+    usbQuery=usb_hardware.select().where(usb_hardware.c.device_name.like(f'%{device_name}%')) \
+        .join(hardware_driver,hardware_driver.c.hardware_id==usb_hardware.c.id) \
+        .where(hardware_driver.c.pci_usb_key=='usb') \
+        .join(driver,driver.c.driver_id==hardware_driver.c.driver_id)
+    
+    usbResult=db.execute(usbQuery).fetchall()
+    pciQuery=pci_hardware.select().where(pci_hardware.c.device_name.like(f'%{device_name}%')) \
+        .join(hardware_driver,hardware_driver.c.hardware_id==pci_hardware.c.id) \
+        .where(hardware_driver.c.pci_usb_key=='usb') \
+        .join(driver,driver.c.driver_id==hardware_driver.c.driver_id)
+    pciResult=db.execute(pciQuery).fetchall()
+    # 合并两个结果，根据driver_id去重
+    driverDict={}
+    for i in usbResult:
+        if driverDict.get(i.driver_id) is None:
+            driverDict[i.driver_id]=i
+    for i in pciResult:
+        if driverDict.get(i.driver_id) is None:
+            driverDict[i.driver_id]=i
+    driverList=[]
+    for i in driverDict:
+        driverList.append(i)
+    print(driverList)
+@app.get("/api/FindHardwareByVendor")
 # 根据厂商名与PCI/USB信息 选硬件名（前端）
+async def get_driver_list(driver_type,vendor_name):
+    db=SessionLocal()
+    masterTable=None
+    if driver_type not in ['usb','pic']:
+        return '类型错误'
+    if driver_type=='usb':
+        masterTable=usb_vendor.select().join(usb_hardware,usb_hardware.c.vendor_name==usb_vendor.c.vendor_name).where(usb_vendor.vendor_name==vendor_name)
+    else:
+        masterTable=pci_vendor.select().join(pci_hardware,pci_hardware.c.vendor_name==pci_vendor.c.vendor_name).where(pci_vendor.vendor_name==vendor_name)
+    result=db.execute(masterTable).fetchall()
+    print(result)
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8000)
