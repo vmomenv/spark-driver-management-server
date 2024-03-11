@@ -41,6 +41,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 async def login_for_access_token(request:Request):
     form_data=await request.body()
+    print('-----------',form_data)
     form_data=json.loads(form_data)
     user = authenticate_user(form_data['username'], form_data['password'])
     if not user:
@@ -279,9 +280,10 @@ async def upload_driver(
     version: str = Form(...),
     file_size: int = Form(...),
     description: str = Form(...),
-    pci_device: str = Form(...),
-    usb_device: str = Form(...),
-    system_version: str = Form(...),
+hardware_type_id: str = Form(...),
+    hardware_id: int = Form(...),
+    # usb_device: str = Form(...),
+    pci_usb_key:str = Form(...),
 ):
     try:
         # 将上传的文件保存到指定的文件夹
@@ -294,17 +296,32 @@ async def upload_driver(
 
         # 将数据插入数据库
         db = SessionLocal()
+        hardwareId=hardware_id
+        # if pci_usb_key=='pci':
+        #     pass
+        # else:
+        #     pass
         try:
-            db.execute(driver.insert().values(
+            # 拿到自增id
+            ret=db.execute(driver.insert().values(
                 file_name=file_name,
                 package_name=package_name,
                 version=version,
                 file_size=file_size,
                 description=description,
-                pci_device=pci_device,
-                usb_device=usb_device,
-                system_version=system_version,
+                # pci_device=pci_device,
+                # usb_device=usb_device,
+                # system_version=system_version,
             ))
+            insertId=ret.inserted_primary_key[0]
+            db.execute(hardware_driver.insert().values(
+                hardware_id=hardwareId,# 这个是硬件id，是usb、pci——hardware里的id
+                driver_id=insertId,
+                hardware_type_id=hardware_type_id,# 这个是前端选择的硬件类型
+                pci_usb_key=pci_usb_key,#这个是前端选择的usb和pci
+                # system_version=system_version,
+            ))
+
             db.commit()
         except Exception as e:
             db.rollback()
@@ -594,44 +611,84 @@ async def get_driver_list_by_type(driver_type,request:Request):
     # form_data=json.loads(form_data)
     db = SessionLocal()
     # select * from hardware_driver left join driver on driver.driver.id=hardware_driver.driver_id where type in ('','common')
-    query=hardware_driver.select().join(driver,driver.c.driver_id==hardware_driver.c.driver_id).where(hardware_driver.c.pci_usb_key==driver_type)
+    query=select(driver.c.driver_id,driver.c.file_name,driver.c.package_name,driver.c.version,driver.c.file_size,driver.c.description) \
+        .select_from(hardware_driver) \
+        .join(driver,driver.c.driver_id==hardware_driver.c.driver_id) \
+        .where(hardware_driver.c.hardware_type_id==driver_type) \
+        .group_by(driver.c.driver_id)
     result = db.execute(query).fetchall()
     print(result)
+    driverList=[]
+    for i in result:
+        package_name=i.package_name
+        upload_folder = f"/download/{package_name}"
+        driverList.append({'driver_id': i.driver_id,'file_name':i.file_name,
+             'package_name':i.package_name,
+             'version':i.version,'file_size':i.file_size,
+             'description':i.description,
+             'file_path':os.path.join(upload_folder,i.file_name)
+        })
+    # XXX 返回数据结构
+    return driverList
 
 
 @app.get("/api/FindFilesByHardwareId")
 # # 根据硬件ID选驱动文件（给出entry_id)
 async def get_driver_list_by_hardware_id(driver_type,device_id):
     db=SessionLocal()
-    if driver_type not in ['usb','pic']:
+    if driver_type not in ['usb','pci']:
         return '类型错误'
-    query=hardware_driver.select().join(driver,driver.c.driver_id==hardware_driver.c.driver_id).where(hardware_driver.c.pci_usb_key==driver_type)
+    query=select(driver.c.driver_id,driver.c.file_name,driver.c.package_name,driver.c.version,driver.c.file_size,driver.c.description) \
+        .select_from(hardware_driver) \
+           .join(driver,driver.c.driver_id==hardware_driver.c.driver_id).where(hardware_driver.c.pci_usb_key==driver_type) \
+    .group_by(driver.c.driver_id)
     if driver_type=='usb':
         query=query.join(usb_hardware,hardware_driver.c.hardware_id==usb_hardware.c.id) \
-            .where(usb_hardware.c.device_id==device_id)
+            .where(usb_hardware.c.entry_id==device_id)
     else:
         query=query.join(pci_hardware,hardware_driver.c.hardware_id==pci_hardware.c.id) \
-            .where(pci_hardware.c.device_id==device_id)
+            .where(pci_hardware.c.entry_id==device_id)
     result=db.execute(query).fetchall()
     print(result)
 
-@app.get("/api/FindFilesByDriverName")
-# # 根据驱动名称选驱动文件（客户端）
+    driverList = []
+    for i in result:
+        package_name = i.package_name
+        upload_folder = f"/download/{package_name}"
+        driverList.append({'driver_id': i.driver_id, 'file_name': i.file_name,
+                           'package_name': i.package_name,
+                           'version': i.version, 'file_size': i.file_size,
+                           'description': i.description,
+                           'file_path': os.path.join(upload_folder, i.file_name)
+                           })
+    # XXX 返回数据结构
+    return driverList
+
+
+@app.get("/api/FindFilesByDeviceName")
+# 根据设备商品名找驱动
+
 async def get_driver_list_by_driver_name(device_name):
     db=SessionLocal()
     # 查usb，查pci，然后根据对应的类型去中间表去查，最后合并数据
-    usbQuery=usb_hardware.select().where(usb_hardware.c.device_name.like(f'%{device_name}%')) \
+    usbQuery=select(driver.c.driver_id,driver.c.file_name,driver.c.package_name,driver.c.version,driver.c.file_size,driver.c.description) \
+    .select_from(usb_hardware) \
         .join(hardware_driver,hardware_driver.c.hardware_id==usb_hardware.c.id) \
-        .where(hardware_driver.c.pci_usb_key=='usb') \
-        .join(driver,driver.c.driver_id==hardware_driver.c.driver_id)
-    
+        .join(driver, driver.c.driver_id == hardware_driver.c.driver_id) \
+        .where(usb_hardware.c.device_name.like(f'%{device_name}%')) \
+        .where(hardware_driver.c.pci_usb_key=='usb')
+
+
     usbResult=db.execute(usbQuery).fetchall()
-    pciQuery=pci_hardware.select().where(pci_hardware.c.device_name.like(f'%{device_name}%')) \
+    pciQuery=select(driver.c.driver_id,driver.c.file_name,driver.c.package_name,driver.c.version,driver.c.file_size,driver.c.description) \
+    .select_from(pci_hardware) \
+        .where(pci_hardware.c.device_name.like(f'%{device_name}%')) \
         .join(hardware_driver,hardware_driver.c.hardware_id==pci_hardware.c.id) \
-        .where(hardware_driver.c.pci_usb_key=='usb') \
+        .where(hardware_driver.c.pci_usb_key=='pci') \
         .join(driver,driver.c.driver_id==hardware_driver.c.driver_id)
     pciResult=db.execute(pciQuery).fetchall()
     # 合并两个结果，根据driver_id去重
+    # print(pciResult)
     driverDict={}
     for i in usbResult:
         if driverDict.get(i.driver_id) is None:
@@ -641,21 +698,46 @@ async def get_driver_list_by_driver_name(device_name):
             driverDict[i.driver_id]=i
     driverList=[]
     for i in driverDict:
-        driverList.append(i)
+        package_name = driverDict[i].package_name
+        upload_folder = f"/download/{package_name}"
+        driverList.append({'driver_id': driverDict[i].driver_id, 'file_name': driverDict[i].file_name,
+                           'package_name': driverDict[i].package_name,
+                           'version': driverDict[i].version, 'file_size': driverDict[i].file_size,
+                           'description': driverDict[i].description,
+                           'file_path': os.path.join(upload_folder, driverDict[i].file_name)
+                           })
     print(driverList)
+    return driverList
+
+
+
 @app.get("/api/FindHardwareByVendor")
 # 根据厂商名与PCI/USB信息 选硬件名（前端）
 async def get_driver_list(driver_type,vendor_name):
     db=SessionLocal()
     masterTable=None
-    if driver_type not in ['usb','pic']:
+    if driver_type not in ['usb','pci']:
         return '类型错误'
     if driver_type=='usb':
-        masterTable=usb_vendor.select().join(usb_hardware,usb_hardware.c.vendor_name==usb_vendor.c.vendor_name).where(usb_vendor.vendor_name==vendor_name)
+        masterTable=(select(usb_hardware.c.id,usb_hardware.c.device_name)
+             .select_from(usb_vendor)
+                .join(usb_hardware,usb_hardware.c.vendor==usb_vendor.c.vendor)
+                .where(usb_vendor.c.vendor_name.like(f'%{vendor_name}%'))
+                )
     else:
-        masterTable=pci_vendor.select().join(pci_hardware,pci_hardware.c.vendor_name==pci_vendor.c.vendor_name).where(pci_vendor.vendor_name==vendor_name)
+        masterTable=(select(pci_hardware.c.id,pci_hardware.c.device_name)
+             .select_from(pci_vendor)
+                .join(pci_hardware,pci_hardware.c.vendor==pci_vendor.c.vendor)
+                .where(pci_vendor.c.vendor_name.like(f'%{vendor_name}%'))
+                )
+
+
     result=db.execute(masterTable).fetchall()
+    hardwareList=[]
+    for i in result:
+        hardwareList.append({'hardware_id':i.id,'device_name':i.device_name})
     print(result)
+    return hardwareList
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    uvicorn.run('main:app', host="127.0.0.1", port=8000,reload=True)

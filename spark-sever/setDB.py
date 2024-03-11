@@ -105,7 +105,6 @@ driver = Table(
     Column('version', String(50)),
     Column('file_size', Integer),
     Column('description', String(500)),
-    Column('device_id', String(50))
 )
 # 定义硬件驱动关联表
 hardware_driver = Table(
