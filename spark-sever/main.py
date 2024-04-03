@@ -766,7 +766,21 @@ async def get_internal_file_path(url_path: str):
     # Return the file as a response with media type application/octet-stream
     return FileResponse(file_path, media_type='application/octet-stream')
 
+@app.get("/serverlist")
+async def get_server_list():
+    # Assuming the file is located in the spark-serverlist directory in the parent directory
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    file_path = os.path.join(base_dir, "../spark-serverlist/serverlist.json")
 
+    # Check if the file exists
+    if not os.path.exists(file_path):
+        return {"error": "Server list file not found"}
+
+    # Read the JSON data from the file
+    with open(file_path, "r") as f:
+        server_list = json.load(f)
+
+    return server_list
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run('main:app', host="127.0.0.1", port=8000,reload=True)
