@@ -8,6 +8,7 @@ from sqlalchemy import  select
 from datetime import datetime
 from self_db import *
 
+from starlette.responses import FileResponse
 
 from fastapi import File, UploadFile,Request
 # from fastapi.responses import JSONResponse
@@ -125,7 +126,7 @@ async def create_user(user: UserCreate):
     try:
         db.execute(users.insert().values(
             username=user.username,
-            password=user.password,
+            password=user.password,# XXX 密码加密
             role_id=user.roleid,
             email=user.email
         ))
@@ -278,7 +279,7 @@ async def upload_driver(
     file_name: str = Form(...),
     package_name: str = Form(...),
     version: str = Form(...),
-    file_size: int = Form(...),
+    file_size: str = Form(...),
     description: str = Form(...),
 hardware_type_id: str = Form(...),
     hardware_id: int = Form(...),
@@ -531,7 +532,7 @@ async def search_pci_vendor(query: str):
     db = SessionLocal()
 
     try:
-        stmt = select([pci_vendor.c.id, pci_vendor.c.vendor_name]).where(
+        stmt = select(pci_vendor.c.id, pci_vendor.c.vendor_name).where(
             pci_vendor.c.vendor_name.ilike(f"%{query}%")
         )
         results = db.execute(stmt).all()
@@ -552,7 +553,7 @@ async def search_usb_vendor(query: str):
     db = SessionLocal()
 
     try:
-        stmt = select([usb_vendor.c.id, usb_vendor.c.vendor_name]).where(
+        stmt = select(usb_vendor.c.id, usb_vendor.c.vendor_name).where(
             usb_vendor.c.vendor_name.ilike(f"%{query}%")
         )
         results = db.execute(stmt).all()
@@ -570,7 +571,7 @@ async def search_usb_vendor(query: str):
 async def get_pcihardware_by_vendor(vendor: str):
     # 执行查询
     db = SessionLocal()
-    query = pci_hardware.select().where(pci_hardware.c.vendor == vendor)
+    query = pci_hardware.select().where(pci_hardware.c.vendor_name == vendor)
     result = db.execute(query).fetchall()
     print('关闭连接')
 
@@ -587,7 +588,7 @@ async def get_pcihardware_by_vendor(vendor: str):
 async def get_usbhardware_by_vendor(vendor: str):
     # 执行查询
     db = SessionLocal()
-    query =usb_hardware.select().where(usb_hardware.c.vendor == vendor)
+    query =usb_hardware.select().where(usb_hardware.c.vendor_name == vendor)
     result = db.execute(query).fetchall()
     print('关闭连接')
 
@@ -738,6 +739,47 @@ async def get_driver_list(driver_type,vendor_name):
         hardwareList.append({'hardware_id':i.id,'device_name':i.device_name})
     print(result)
     return hardwareList
+
+
+
+
+
+from fastapi import FastAPI, HTTPException
+import os
+from starlette.responses import FileResponse
+
+app = FastAPI()
+
+from fastapi import FastAPI, HTTPException
+import os
+from starlette.responses import FileResponse
+
+app = FastAPI()
+
+@app.get("/download/{url_path:path}")
+async def get_internal_file_path(url_path: str):
+    # Extract file path from the URL path
+    file_path = url_path.split('/download/')[-1]
+
+    # Assuming the file is located in the spark-driver-repo directory in the parent directory
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    repo_dir = os.path.join(base_dir, "../spark-driver-repo")
+
+    # Construct the full path to the file
+    file_path = os.path.join(repo_dir, file_path)
+
+    # Check if the file exists
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="File not found")
+
+    # Check if the path is a file
+    if not os.path.isfile(file_path):
+        raise HTTPException(status_code=500, detail=f"File at path {file_path} is not a file.")
+
+    # Return the file as a response with media type application/octet-stream
+    return FileResponse(file_path, media_type='application/octet-stream')
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run('main:app', host="127.0.0.1", port=8000,reload=True)

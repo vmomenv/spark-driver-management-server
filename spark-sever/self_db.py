@@ -17,12 +17,17 @@ def generate_random_string(length):
     return ''.join([random.choice(letters) for _ in range(length)])
 # 读取配置文件
 config = configparser.ConfigParser()
-
-if not os.path.exists(CONFIG_FILE):
+CONFIG_PATH=os.path.join(os.path.dirname(os.path.abspath(__file__)),CONFIG_FILE)
+if not os.path.exists(CONFIG_PATH):
     # 复制文件
-    shutil.copy(CONFIG_EXAMPLE_FILE, CONFIG_FILE)
+    shutil.copy(os.path.join(os.path.dirname(os.path.abspath(__file__)),CONFIG_EXAMPLE_FILE), CONFIG_PATH)
+    # 同时修改文件路径
+    temp_config = configparser.ConfigParser()
+    temp_config.read(CONFIG_PATH)
+    temp_config['database']['file_path']=os.path.join(os.path.dirname(os.path.abspath(__file__)),temp_config['database']['file_path'])
+    temp_config.write(open(CONFIG_PATH,'w'))
     
-config.read(CONFIG_FILE)
+config.read(CONFIG_PATH)
 # 根据配置文件的数据库类型去导入对应的模块
 dbFactoryModule=importlib.import_module(f".{config['database']['type']}",package='db_factory')
 #  利用反射获取类名
@@ -32,6 +37,7 @@ dbFactory=cls(config)
 
 # 构建数据库连接 URI
 default_db_uri =dbFactory.get_db_url()
+print('----------',default_db_uri)
 connectArgs={}
 if config['database']['type']=='sqlite':
     connectArgs['check_same_thread']=True
@@ -47,15 +53,15 @@ if not database_exists(default_engine.url):
     create_database(default_engine.url)
 secretConfig = configparser.ConfigParser()
 # 读取secretkey
-if not os.path.exists(CONFIG_SECRET_KEY_FILE):
-    shutil.copy(CONFIG_SECRET_KEY_EXAMPLE_FILE,CONFIG_SECRET_KEY_FILE)
+if not os.path.exists(os.path.join(os.path.dirname(os.path.abspath(__file__)),CONFIG_SECRET_KEY_FILE)):
+    shutil.copy(os.path.join(os.path.dirname(os.path.abspath(__file__)),CONFIG_SECRET_KEY_EXAMPLE_FILE),os.path.join(os.path.dirname(os.path.abspath(__file__)),CONFIG_SECRET_KEY_FILE))
     
-    secretConfig.read(CONFIG_SECRET_KEY_FILE)
+    secretConfig.read(os.path.join(os.path.dirname(os.path.abspath(__file__)),CONFIG_SECRET_KEY_FILE))
     secretKey=generate_random_string(72)
     print(secretKey)
     secretConfig.set('secretkey','secret_key',secretKey)
-    secretConfig.write(open(CONFIG_SECRET_KEY_FILE,'wt'))
-secretConfig.read(CONFIG_SECRET_KEY_FILE)
+    secretConfig.write(open(os.path.join(os.path.dirname(os.path.abspath(__file__)),CONFIG_SECRET_KEY_FILE),'wt'))
+secretConfig.read(os.path.join(os.path.dirname(os.path.abspath(__file__)),CONFIG_SECRET_KEY_FILE))
 # 获取数据
 SECRET_KEY = secretConfig['secretkey']['secret_key']
 ALGORITHM = "HS256"
@@ -129,7 +135,7 @@ driver = Table(
     Column('file_name', String(255)),
     Column('package_name', String(255)),
     Column('version', String(50)),
-    Column('file_size', Integer),
+    Column('file_size', String(50)),
     Column('description', String(500)),
 )
 # 定义硬件驱动关联表
