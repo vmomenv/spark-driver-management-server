@@ -743,19 +743,6 @@ async def get_driver_list(driver_type,vendor_name):
 
 
 
-
-from fastapi import FastAPI, HTTPException
-import os
-from starlette.responses import FileResponse
-
-app = FastAPI()
-
-from fastapi import FastAPI, HTTPException
-import os
-from starlette.responses import FileResponse
-
-app = FastAPI()
-
 @app.get("/download/{url_path:path}")
 async def get_internal_file_path(url_path: str):
     # Extract file path from the URL path
