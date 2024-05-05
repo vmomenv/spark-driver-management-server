@@ -240,26 +240,26 @@ def get_menu(token=Header())-> Dict:
             "icon": "s-custom",
             "url": "User.vue"
         },
-        {
-            "label": "硬件列表",
-            "icon": "location",
-            "children": [
-                {
-                    "path": "/pcilist",
-                    "name": "pcilist",
-                    "label": "PCI列表",
-                    "icon": "setting",
-                    "url": "PciList.vue"
-                },
-                {
-                    "path": "/usblist",
-                    "name": "usblist",
-                    "label": "USB列表",
-                    "icon": "setting",
-                    "url": "UsbList.vue"
-                }
-            ]
-        }
+        # {
+        #     "label": "硬件列表",
+        #     "icon": "location",
+        #     "children": [
+        #         {
+        #             "path": "/pcilist",
+        #             "name": "pcilist",
+        #             "label": "PCI列表",
+        #             "icon": "setting",
+        #             "url": "PciList.vue"
+        #         },
+        #         {
+        #             "path": "/usblist",
+        #             "name": "usblist",
+        #             "label": "USB列表",
+        #             "icon": "setting",
+        #             "url": "UsbList.vue"
+        #         }
+        #     ]
+        # }
     ]
 
     response_data = {
