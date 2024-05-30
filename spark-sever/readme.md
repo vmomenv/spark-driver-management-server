@@ -20,5 +20,17 @@ jose: 用于JWT（JSON Web Token）支持。
 用于连接MYSQL
 `pip install mysql-connector-python`
 
+`pip install HTTPException`
+使用orm架构sqlalchemy
+`pip install sqlalchemy`
+`pip install mysql-connector-python`
+
+`pip install sqlalchemy_utils`
+`pip install pydantic`
+`pip install python-multipart`
+pyJWT json web token 
+`pip install python-jose`
+`pip install bcrypt`
+`pip install pymysql`
 运行
 `uvicorn main:app --reload`
